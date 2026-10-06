@@ -1,0 +1,890 @@
+<!-- سامانه عملکرد تحصیلی مدرسه — طراحی و ساخت: امیرمحمد عزت‌پور — تماس: 09934296191 -->
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>سامانه عملکرد تحصیلی مدرسه</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--bd:#e3e7ee;--tx:#1c2430;--mu:#6b7684;--br:#2f5fd8;--brs:#e8eefd;--ok:#1f9d5a;--oks:#e6f7ee;--wa:#c98a0a;--was:#fdf3e0;--bad:#d6473f;--bads:#fbe9e8;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Tahoma,"Segoe UI",Vazirmatn,sans-serif;font-size:14px}
+header{background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:6px;padding:8px 12px;flex-wrap:wrap}
+header b{color:var(--br);margin-left:10px}
+.tab{border:0;background:transparent;padding:8px 14px;border-radius:9px;cursor:pointer;font:inherit;color:var(--tx)}
+.tab.on{background:var(--br);color:#fff;font-weight:700}
+main{max-width:1150px;margin:0 auto;padding:14px 12px 60px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+.grid{display:grid;gap:10px}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:800px){.g4,.g3{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+.stat .l{color:var(--mu);font-size:12px}.stat .v{font-size:24px;font-weight:800;margin-top:4px}
+h3{margin:0 0 10px;font-size:15px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
+th{color:var(--mu);font-size:12px;background:var(--card);position:sticky;top:0;z-index:2}
+tbody tr:hover{background:var(--brs)}
+.tw{overflow-x:auto}
+input,select,textarea{font:inherit;padding:6px 8px;border:1px solid var(--bd);border-radius:8px;background:#fff;color:var(--tx);width:100%}
+td input,td select{padding:4px 6px;min-width:58px}
+input[type=checkbox]{width:auto}
+label{display:block;font-size:12px;color:var(--mu);margin-bottom:3px}
+.f{flex:1;min-width:130px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+.btn{padding:8px 14px;border-radius:9px;border:1px solid var(--bd);background:#fff;cursor:pointer;font:inherit}
+.btn.p{background:var(--br);color:#fff;border-color:var(--br)}.btn.d{background:var(--bads);color:var(--bad);border-color:transparent}.btn.small{padding:4px 9px;font-size:12px;border-radius:7px}
+.b{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700}
+.b.e{background:var(--oks);color:var(--ok)}.b.g{background:var(--brs);color:var(--br)}.b.a{background:var(--was);color:var(--wa)}.b.f{background:var(--bads);color:var(--bad)}.b.u{background:#eef0f3;color:var(--mu)}
+.mu{color:var(--mu);font-size:12px}
+.bar{height:9px;background:#eceff4;border-radius:5px;overflow:hidden}.bar>div{height:100%;background:var(--br)}
+.warn{background:var(--was);border:1px solid #f0d9a5;color:#7a5200;padding:10px 12px;border-radius:10px;margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mbg{position:fixed;inset:0;background:rgba(10,14,24,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:12px}
+.modal{background:#fff;border-radius:12px;padding:18px;width:100%;max-width:560px;max-height:90vh;overflow:auto}
+input.jdate{cursor:pointer;background:#fff;text-align:center;font-weight:600}
+.jdcell{padding:8px 0;border:1px solid var(--bd);border-radius:8px;background:#fff;cursor:pointer;font:inherit}
+.jdcell:hover{background:var(--brs)}
+.jdcell.jtoday{border-color:var(--br);font-weight:700}
+.jdcell.jsel{background:var(--br);color:#fff;border-color:var(--br)}
+.jgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1c2430;color:#fff;padding:9px 18px;border-radius:9px;z-index:99;display:none}
+ul.r{margin:6px 0;padding-right:18px;line-height:1.9}
+.sub{display:flex;gap:6px;margin-bottom:10px}
+details{margin-bottom:12px}summary{cursor:pointer;font-weight:700;padding:10px 0}
+@media print{header,.noprint,.warn{display:none!important}.mbg{position:static;background:none}.modal{max-height:none;box-shadow:none}body{background:#fff}
+body:has(#cardOv) main{display:none!important}
+#cardOv{position:static!important;background:none!important;padding:0!important}}
+</style>
+</head>
+<body>
+<header class="noprint">
+  <b>🎓 عملکرد تحصیلی</b>
+  <span class="mu" style="font-size:11px">سازنده: امیرمحمد عزت‌پور — ۰۹۹۳۴۲۹۶۱۹۱</span>
+  <button class="tab" data-t="dash">داشبورد و گزارش</button>
+  <button class="tab" data-t="entry">ثبت داده</button>
+  <button class="tab" data-t="follow">پیگیری</button>
+  <button class="tab" data-t="manage">مدیریت</button>
+  <span style="flex:1"></span>
+  <span class="mu" id="saved"></span>
+</header>
+<main><div id="banner"></div><div id="view"></div></main>
+<div id="toast"></div>
+
+<script>
+/* ================= CORE (بدون وابستگی به صفحه) ================= */
+const LS='schoolSys_v1', LSB=['schoolSys_bak1','schoolSys_bak2','schoolSys_bak3'];
+const CLASSES=["ریاضی 1","ریاضی 2","انسانی"];
+const COMP={morning:"آزمون صبحگاهی",weekly:"آزمون تشریحی",study:"ساعت مطالعه",logging:"ثبت مطالعه",quality:"کیفیت مطالعه",classroom:"عملکرد کلاسی"};
+const CKEY={morning:'morningScore',weekly:'weeklyScore',study:'studyScore',logging:'loggingScore',quality:'qualityScore',classroom:'classroomScore'};
+const JM=["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
+const DEF_CFG={weights:{morning:15,weekly:20,study:20,logging:10,quality:15,classroom:20},goal:2,goalByClass:{},thresholds:{excellent:85,good:70,attention:55},drop:10,penalty:5,
+  cardMsg:{
+    e:{t:'عالی پیش می‌روی! 🌟',s:'همین‌طور با انگیزه ادامه بده، نتیجه عالی گرفتی.'},
+    g:{t:'خوب کار می‌کنی 💪',s:'با کمی تلاش بیشتر، این ماه از هر ماه بهتر می‌شه.'},
+    a:{t:'جای پیشرفت داری 🙂',s:'چند نکته‌ی کوچک هست که با تمرکز روی آن‌ها نتیجه بهتر می‌شه.'},
+    f:{t:'این ماه فرصت شروع دوباره‌ست 🤝',s:'با کمک معلم‌ها و کمی برنامه‌ریزی، ماه بعد بهتر می‌شه.'},
+    u:{t:'داده کافی برای این ماه ثبت نشده',s:'لطفاً ثبت روزانه‌ی خودت را جدی‌تر دنبال کن.'}
+  }};
+let S=null, CACHE={}, MONTHS=null;
+
+function newState(){return {v:1,students:[],days:{},exams:[],actions:[],cfg:JSON.parse(JSON.stringify(DEF_CFG)),lastBackup:null,lastSnap:null};}
+function loadState(){
+  try{const r=localStorage.getItem(LS); if(r){S=JSON.parse(r);}}catch(e){}
+  if(!S){ // تلاش برای بازیابی از نسخه‌های خودکار
+    for(const k of LSB){try{const r=localStorage.getItem(k); if(r){S=JSON.parse(r);break;}}catch(e){}}
+  }
+  if(!S)S=newState();
+  S.cfg=Object.assign({},DEF_CFG,S.cfg||{});
+}
+function saveState(){
+  CACHE={};MONTHS=null;
+  try{
+    localStorage.setItem(LS,JSON.stringify(S));
+    const el=document.getElementById('saved'); if(el)el.textContent='✓ ذخیره شد '+new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'});
+    return true;
+  }catch(e){alert('خطا در ذخیره‌سازی! فوراً از منوی «مدیریت» نسخه پشتیبان بگیرید.');return false;}
+}
+function autoSnapshot(){ // یک نسخه خودکار در روز، سه نسخه چرخشی
+  const today=new Date().toISOString().slice(0,10);
+  if(S.lastSnap===today||!S.students.length)return;
+  try{
+    const cur=localStorage.getItem(LS);
+    localStorage.setItem(LSB[2],localStorage.getItem(LSB[1])||cur);
+    localStorage.setItem(LSB[1],localStorage.getItem(LSB[0])||cur);
+    localStorage.setItem(LSB[0],cur);
+    S.lastSnap=today; localStorage.setItem(LS,JSON.stringify(S));
+  }catch(e){}
+}
+
+const fa=new Intl.DateTimeFormat('en-u-ca-persian-nu-latn',{year:'numeric',month:'numeric',day:'numeric',timeZone:'UTC'});
+const jmemo={};
+function jparts(iso){
+  if(jmemo[iso])return jmemo[iso];
+  const p=fa.formatToParts(new Date(iso+'T12:00:00Z')).reduce((a,x)=>(a[x.type]=x.value,a),{});
+  return jmemo[iso]={y:+p.year,m:+p.month,d:+p.day};
+}
+function monthOf(iso){const p=jparts(iso);return p.y+'-'+String(p.m).padStart(2,'0');}
+function fa2(n){return String(n).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);}
+function jdate(iso){const p=jparts(iso);return fa2(p.d)+' '+JM[p.m-1]+' '+fa2(p.y);}
+function mlabel(m){const [y,mo]=m.split('-');return JM[+mo-1]+' '+fa2(y);}
+function addM(m,d){let [y,mo]=m.split('-').map(Number);mo+=d;while(mo<1){mo+=12;y--}while(mo>12){mo-=12;y++}return y+'-'+String(mo).padStart(2,'0');}
+
+/* ---- تقویم شمسی برای انتخاب تاریخ (کاملاً آفلاین، بر پایه‌ی همان تقویم فارسی مرورگر) ---- */
+const JYCACHE={};
+function jalaliYearMap(jy){
+  if(JYCACHE[jy])return JYCACHE[jy];
+  const map={};for(let m=1;m<=12;m++)map[m]=[];
+  const startGuess=new Date(Date.UTC(jy+621,0,25)); // ۲۵ ژانویه سال گرگوریِ آغاز سال شمسی، حاشیه امن پیش از نوروز
+  for(let i=0;i<420;i++){
+    const d=new Date(startGuess.getTime()+i*86400000);
+    const iso=d.toISOString().slice(0,10);
+    const p=jparts(iso);
+    if(p.y===jy)map[p.m].push(iso);
+    else if(p.y>jy)break;
+  }
+  return JYCACHE[jy]=map;
+}
+function jalaliMonthDates(jy,jm){return jalaliYearMap(jy)[jm]||[];}
+function isoOf(id){const el=$(id);return el?(el.dataset.iso||todayISO()):todayISO();}
+function jalaliInputHTML(id,iso){return '<input type="text" id="'+id+'" class="jdate" data-iso="'+iso+'" value="'+jdate(iso)+'" readonly placeholder="انتخاب تاریخ">';}
+function wireJalali(id,onPick){
+  const inp=$(id);if(!inp)return;
+  inp.addEventListener('click',()=>openJalaliPicker(inp,onPick));
+  inp.addEventListener('keydown',e=>{ // باز شدن تقویم بدون ماوس: Enter، فاصله یا کلید جهت
+    if(e.key==='Enter'||e.key===' '||e.key==='ArrowDown'||e.key==='ArrowUp'){
+      e.preventDefault();openJalaliPicker(inp,onPick);
+    }
+  });
+}
+function openJalaliPicker(inputEl,onPick){
+  let cur=jparts(inputEl.dataset.iso||todayISO()),jy=cur.y,jm=cur.m;
+  const bg=document.createElement('div');bg.className='mbg';
+  function focusGrid(){
+    const sel=bg.querySelector('.jsel')||bg.querySelector('.jtoday')||bg.querySelector('.jdcell');
+    if(sel)sel.focus();
+  }
+  function render(keepFocus){
+    const dates=jalaliMonthDates(jy,jm);
+    let cells='';
+    if(dates.length){
+      const wd=(new Date(dates[0]+'T12:00:00Z').getUTCDay()+1)%7; // ۰=شنبه
+      for(let i=0;i<wd;i++)cells+='<div></div>';
+      dates.forEach((iso,i)=>{
+        const d=i+1,isToday=iso===todayISO(),isSel=iso===inputEl.dataset.iso;
+        cells+='<button type="button" class="jdcell'+(isToday?' jtoday':'')+(isSel?' jsel':'')+'" data-iso="'+iso+'">'+fa2(d)+'</button>';
+      });
+    }
+    bg.innerHTML=`<div class="modal" style="max-width:330px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <button class="btn" id="jprev" type="button">‹ ماه قبل</button>
+        <b>${JM[jm-1]} ${fa2(jy)}</b>
+        <button class="btn" id="jnext" type="button">ماه بعد ›</button>
+      </div>
+      <div class="jgrid" style="font-size:11px;color:var(--mu);margin-bottom:4px;text-align:center">
+        ${['ش','ی','د','س','چ','پ','ج'].map(x=>'<div>'+x+'</div>').join('')}
+      </div>
+      <div class="jgrid">${cells||'<div class="mu" style="grid-column:1/-1;text-align:center;padding:10px">در حال بارگذاری…</div>'}</div>
+      <div class="btn-row" style="display:flex;gap:8px;margin-top:12px"><button class="btn" id="jtoday" type="button">امروز</button><button class="btn" id="jclose" type="button">بستن</button></div>
+      <div class="mu" style="margin-top:8px;font-size:11px">با کلیدهای جهت‌دار بین روزها حرکت کنید، Enter برای انتخاب، PageUp/PageDown برای تغییر ماه، Esc برای بستن.</div>
+    </div>`;
+    bg.querySelector('#jprev').onclick=()=>{jm--;if(jm<1){jm=12;jy--;}render();};
+    bg.querySelector('#jnext').onclick=()=>{jm++;if(jm>12){jm=1;jy++;}render();};
+    bg.querySelector('#jtoday').onclick=()=>{const t=todayISO();inputEl.dataset.iso=t;inputEl.value=jdate(t);bg.remove();if(onPick)onPick(t);};
+    bg.querySelector('#jclose').onclick=()=>bg.remove();
+    bg.querySelectorAll('.jdcell').forEach(b=>b.onclick=()=>{const iso=b.dataset.iso;inputEl.dataset.iso=iso;inputEl.value=jdate(iso);bg.remove();if(onPick)onPick(iso);});
+    if(keepFocus!==false)focusGrid();
+  }
+  bg.addEventListener('keydown',e=>{ // پیمایش تقویم فقط با صفحه‌کلید (بدون نیاز به ماوس)
+    const act=document.activeElement;
+    if(e.key==='PageDown'){e.preventDefault();jm++;if(jm>12){jm=1;jy++;}render();return;}
+    if(e.key==='PageUp'){e.preventDefault();jm--;if(jm<1){jm=12;jy--;}render();return;}
+    if(!act||!act.classList||!act.classList.contains('jdcell'))return;
+    let delta=0;
+    if(e.key==='ArrowLeft')delta=1; // چیدمان راست‌به‌چپ: چپ یعنی روز بعد
+    else if(e.key==='ArrowRight')delta=-1;
+    else if(e.key==='ArrowDown')delta=7;
+    else if(e.key==='ArrowUp')delta=-7;
+    else return;
+    e.preventDefault();
+    const d=new Date(act.dataset.iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+delta);
+    const niso=d.toISOString().slice(0,10),p=jparts(niso);
+    if(p.y!==jy||p.m!==jm){jy=p.y;jm=p.m;render(false);}
+    const btn=bg.querySelector('.jdcell[data-iso="'+niso+'"]');
+    if(btn)btn.focus();
+  });
+  render();document.body.appendChild(bg);focusGrid();
+}
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function monthList(){
+  if(!MONTHS){const s=new Set([monthOf(todayISO())]);Object.keys(S.days).forEach(d=>s.add(monthOf(d)));S.exams.forEach(e=>s.add(monthOf(e.date)));MONTHS=[...s].sort().reverse();}
+  return MONTHS;
+}
+function datesOf(m){return Object.keys(S.days).filter(d=>monthOf(d)===m);}
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const r1=n=>n==null?null:Math.round(n*10)/10;
+const F=n=>n==null?'—':r1(n);
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const stById=id=>S.students.find(s=>s.id===id);
+const active=()=>S.students.filter(s=>s.active!==false);
+function goalOf(st){
+  if(st.goal!=null&&st.goal!=='')return +st.goal;
+  const c=S.cfg.goalByClass[st.cls]; if(c!=null&&c!=='')return +c;
+  return S.cfg.goal;
+}
+
+function compute(sid,m){
+  const key=sid+'|'+m; if(CACHE[key])return CACHE[key];
+  const st=stById(sid), cfg=S.cfg;
+  const dates=datesOf(m);
+  const recs=dates.map(d=>S.days[d][sid]).filter(Boolean);
+  const qs=recs.filter(r=>r.q!=null&&!r.qa).map(r=>r.q);
+  const morning=qs.length?avg(qs):null;
+  const ex=S.exams.filter(e=>monthOf(e.date)===m&&e.scores&&e.scores[sid]!=null&&e.total>0).map(e=>({t:e.type,p:e.scores[sid]/e.total*100}));
+  const gen=ex.filter(e=>e.t==='general').map(e=>e.p), spe=ex.filter(e=>e.t==='specialized').map(e=>e.p);
+  const weekly=ex.length?avg(ex.map(e=>e.p)):null;
+  const hs=recs.filter(r=>r.h!=null).map(r=>r.h);
+  const avgH=hs.length?avg(hs):null, goal=st?goalOf(st):cfg.goal;
+  const study=avgH!=null&&goal>0?Math.min(100,avgH/goal*100):null;
+  const ss=recs.filter(r=>r.s!=null).map(r=>r.s);
+  const quality=ss.length?avg(ss)/3*100:null;
+  const lg=recs.filter(r=>r.lg===0||r.lg===1);
+  const logging=lg.length?sum(lg.map(r=>r.lg))/lg.length*100:null;
+  const hw=recs.filter(r=>r.hw===0||r.hw===1);
+  const hwRate=hw.length?avg(hw.map(r=>r.hw))*100:null;
+  const exp=sum(recs.map(r=>r.ex||0));
+  const hasCls=hw.length||recs.some(r=>r.ex!=null);
+  const classroom=hwRate!=null?Math.max(0,hwRate-exp*cfg.penalty):(hasCls?Math.max(0,100-exp*cfg.penalty):null);
+  const comps={morning,weekly,study,logging,quality,classroom};
+  const av=Object.entries(comps).filter(([k,v])=>v!=null);
+  const tw=sum(av.map(([k])=>cfg.weights[k]||0));
+  const overall=tw>0?sum(av.map(([k,v])=>v*(cfg.weights[k]||0)))/tw:null;
+  return CACHE[key]={sid,m,morningScore:morning,generalScore:gen.length?avg(gen):null,specialScore:spe.length?avg(spe):null,weeklyScore:weekly,studyScore:study,loggingScore:logging,qualityScore:quality,classroomScore:classroom,overall,completeness:Math.round(av.length/6*100),hwRate,exp,avgH,goal,absent:recs.filter(r=>r.qa).length};
+}
+function classify(o){
+  const t=S.cfg.thresholds;
+  if(o==null)return{l:'داده ناکافی',c:'u'};
+  if(o>=t.excellent)return{l:'عالی',c:'e'};
+  if(o>=t.good)return{l:'خوب',c:'g'};
+  if(o>=t.attention)return{l:'نیاز به توجه',c:'a'};
+  return{l:'نیازمند پیگیری',c:'f'};
+}
+function weak(r){return Object.keys(COMP).filter(k=>r[CKEY[k]]!=null&&r[CKEY[k]]<S.cfg.thresholds.attention).map(k=>COMP[k]);}
+function reasons(sid,m){
+  const c=compute(sid,m),p=compute(sid,addM(m,-1)),cf=S.cfg,out=[],w=weak(c);
+  if(c.overall!=null&&c.overall<cf.thresholds.attention)out.push('امتیاز کلی پایین ('+F(c.overall)+')');
+  if(w.length>=2)out.push('چند شاخص ضعیف: '+w.join('، '));
+  if(c.overall!=null&&p.overall!=null&&p.overall-c.overall>=cf.drop)out.push('افت '+F(p.overall-c.overall)+' امتیازی نسبت به ماه قبل');
+  if(c.studyScore!=null&&p.studyScore!=null&&p.studyScore-c.studyScore>=cf.drop)out.push('کاهش ساعت مطالعه نسبت به ماه قبل');
+  if(c.loggingScore!=null&&c.loggingScore<cf.thresholds.attention)out.push('ثبت نامنظم دفتر مطالعه');
+  if(c.exp>p.exp)out.push('افزایش اخراج از کلاس ('+p.exp+' ← '+c.exp+')');
+  if(c.weeklyScore!=null&&p.weeklyScore!=null&&p.weeklyScore-c.weeklyScore>=cf.drop)out.push('کاهش عملکرد آزمون‌های تشریحی');
+  if(c.morningScore!=null&&p.morningScore!=null&&p.morningScore-c.morningScore>=cf.drop)out.push('کاهش عملکرد آزمون صبحگاهی');
+  return out;
+}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function delOneRecord(date,sid){
+  if(S.days[date]){ delete S.days[date][sid]; if(!Object.keys(S.days[date]).length) delete S.days[date]; }
+  saveState();
+}
+
+/* ---- وارد کردن نمرات آزمون صبحگاهی از اکسل (چسباندن یا فایل CSV) ---- */
+function normDigits(s){
+  return String(s)
+    .replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+    .replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+}
+function parsePercentCell(raw){
+  let t=(raw||'').trim();
+  if(t===''||t==='-'||t==='غ'||t==='غایب'||t.toLowerCase()==='absent')return{absent:true};
+  t=normDigits(t).replace(/[٪%]/g,'').trim();
+  const num=parseFloat(t);
+  if(isNaN(num)||num>100)return{invalid:true};
+  return{value:Math.round(num*10)/10};
+}
+/* فرمت ورود ساعت مطالعه: اول ساعت، سپس نقطه، سپس دقیقه (مثلاً 1.30 یعنی یک ساعت و سی دقیقه) — نه عدد اعشاری معمولی */
+function parseHM(raw){
+  let t=normDigits((raw||'').trim());
+  if(t==='')return null;
+  if(!/^\d{1,2}(\.\d{1,2})?$/.test(t))return{invalid:true};
+  const parts=t.split('.');
+  const h=parseInt(parts[0],10);
+  const m=parts[1]!=null?parseInt(parts[1],10):0;
+  if(isNaN(h)||h<0||h>24||isNaN(m)||m<0||m>59||(h===24&&m>0))return{invalid:true};
+  return{value:h+m/60};
+}
+function formatHM(decimal){
+  if(decimal==null||isNaN(decimal))return'';
+  let h=Math.floor(decimal),m=Math.round((decimal-h)*60);
+  if(m===60){h+=1;m=0;}
+  return m===0?String(h):h+'.'+String(m).padStart(2,'0');
+}
+function normName(s){
+  return String(s||'')
+    .replace(/[‌‍‎‏]/g,'')
+    .replace(/[يى]/g,'ی').replace(/ك/g,'ک')
+    .replace(/\s+/g,' ').trim().toLowerCase();
+}
+function matchStudentByName(name){
+  const n=normName(name);
+  if(!n)return{sid:null};
+  const matches=S.students.filter(s=>normName(s.name)===n);
+  if(matches.length===1)return{sid:matches[0].id};
+  if(matches.length>1)return{sid:matches[0].id,ambiguous:true};
+  return{sid:null};
+}
+function buildImportPreview(text){
+  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length);
+  return lines.map(line=>{
+    let parts=line.split('\t');
+    if(parts.length<2)parts=line.split(',');
+    if(parts.length<2)parts=line.split(/\s{2,}/);
+    const name=(parts[0]||'').trim(),pctRaw=(parts.slice(1).join(' ')||'').trim();
+    const match=matchStudentByName(name),pr=parsePercentCell(pctRaw);
+    return{name,pctRaw,sid:match.sid,ambiguous:match.ambiguous,absent:pr.absent||false,value:pr.value!=null?pr.value:null,invalid:!!pr.invalid};
+  }).filter(r=>r.name);
+}
+function importMorningModal(date,cls){
+  let rows=[];
+  const bg=document.createElement('div');bg.className='mbg';
+  bg.innerHTML=`<div class="modal" style="max-width:700px">
+    <h3>📥 وارد کردن نمرات آزمون صبحگاهی از اکسل</h3>
+    <p class="mu">در اکسل دو ستون «نام دانش‌آموز» و «درصد» را انتخاب و کپی کنید (Ctrl+C)، سپس در کادر زیر بچسبانید (Ctrl+V). همچنین می‌توانید فایل CSV خروجی اکسل را انتخاب کنید. سلول خالی یا «غ» به‌معنای غایب است و هرگز صفر حساب نمی‌شود.</p>
+    <div class="row"><div class="f"><label>تاریخ ثبت</label>${jalaliInputHTML('impD',date)}</div>
+    <div class="f"><label>یا انتخاب فایل CSV</label><input type="file" id="impFile" accept=".csv,.txt"></div></div>
+    <textarea id="impTxt" rows="7" placeholder="علی رضایی	85&#10;سارا احمدی	غ"></textarea>
+    <div class="btn-row" style="display:flex;gap:8px;margin-top:8px"><button class="btn p" id="impParse">بررسی و پیش‌نمایش</button><button class="btn" id="impNo">انصراف</button></div>
+    <div id="impPrev" style="margin-top:12px"></div>
+  </div>`;
+  document.body.appendChild(bg);
+  wireJalali('impD');
+  bg.querySelector('#impNo').onclick=()=>bg.remove();
+  bg.querySelector('#impFile').onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();r.onload=()=>{bg.querySelector('#impTxt').value=r.result;};r.readAsText(f,'UTF-8');
+  };
+  bg.querySelector('#impParse').onclick=()=>{
+    const text=bg.querySelector('#impTxt').value;
+    if(!text.trim()){toast('متنی برای بررسی وارد نشده.');return;}
+    rows=buildImportPreview(text);
+    renderPrev();
+  };
+  function renderPrev(){
+    const box=bg.querySelector('#impPrev');
+    if(!rows.length){box.innerHTML='<div class="mu">هیچ ردیف قابل‌خواندنی پیدا نشد.</div>';return;}
+    const okCount=rows.filter(r=>r.sid&&!r.invalid).length;
+    box.innerHTML=`
+      <div class="mu" style="margin-bottom:6px">${fa2(okCount)} از ${fa2(rows.length)} ردیف آماده‌ی ثبت است. ردیف‌های بدون تطبیق را از فهرست کشویی دستی انتخاب کنید یا نادیده بگیرید.</div>
+      <div class="tw" style="max-height:300px"><table><thead><tr><th>نام در فایل</th><th>مقدار</th><th>وضعیت</th><th>تطبیق با دانش‌آموز</th></tr></thead><tbody>
+      ${rows.map((r,i)=>`<tr data-i="${i}">
+        <td>${esc(r.name)}</td>
+        <td>${r.invalid?'<span style="color:var(--bad)">نامعتبر: '+esc(r.pctRaw)+'</span>':(r.absent?'غایب':fa2(r.value)+'٪')}</td>
+        <td>${r.sid?(r.ambiguous?'<span style="color:var(--wa)">چند تطبیق</span>':'<span style="color:var(--ok)">تطبیق یافت</span>'):'<span style="color:var(--bad)">یافت نشد</span>'}</td>
+        <td><select class="impSel" data-i="${i}"><option value="">— نادیده بگیر —</option>${S.students.map(s=>'<option value="'+s.id+'"'+(r.sid===s.id?' selected':'')+'>'+esc(s.name)+(s.active===false?' (غیرفعال)':'')+'</option>').join('')}</select></td>
+      </tr>`).join('')}
+      </tbody></table></div>
+      <div class="btn-row" style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="impApply">ثبت نمرات</button></div>
+    `;
+    box.querySelectorAll('.impSel').forEach(sel=>sel.onchange=e=>{rows[+e.target.dataset.i].sid=e.target.value||null;});
+    box.querySelector('#impApply').onclick=()=>{
+      const d=isoOf('impD');
+      if(!d){toast('تاریخ نامعتبر است');return;}
+      const usable=rows.filter(r=>r.sid&&!r.invalid);
+      if(!usable.length){toast('هیچ ردیف قابل‌ثبتی انتخاب نشده.');return;}
+      let dup=false;const seen=new Set();
+      const day={...(S.days[d]||{})};
+      usable.forEach(r=>{
+        if(seen.has(r.sid))dup=true;seen.add(r.sid);
+        const next={...(day[r.sid]||{})};
+        delete next.q;delete next.qa;
+        if(r.absent)next.qa=1;else next.q=r.value;
+        day[r.sid]=next;
+      });
+      if(Object.keys(day).length)S.days[d]=day;else delete S.days[d];
+      saveState();bg.remove();
+      toast(fa2(usable.length)+' نمره ثبت شد'+(dup?' (برخی نام‌ها تکراری بودند؛ آخرین مقدار اعمال شد)':'')+' ✓');
+      entDaily(d,cls);
+    };
+  }
+}
+
+/* ادغام غیرمخرب یک فایل پشتیبان با داده فعلی — برای تقسیم کار بین چند نفر/دستگاه.
+   هیچ رکورد موجودی حذف نمی‌شود؛ فقط رکوردهای جدید اضافه و فیلدهای مشترک با مقدار جدید به‌روزرسانی می‌شوند. */
+function mergeState(imp){
+  const out=S;
+  (imp.students||[]).forEach(s=>{const i=out.students.findIndex(x=>x.id===s.id);if(i>=0)out.students[i]=Object.assign({},out.students[i],s);else out.students.push(s);});
+  Object.entries(imp.days||{}).forEach(([d,recs])=>{
+    out.days[d]=out.days[d]||{};
+    Object.entries(recs).forEach(([sid,rec])=>{out.days[d][sid]=Object.assign({},out.days[d][sid]||{},rec);});
+  });
+  (imp.exams||[]).forEach(e=>{const i=out.exams.findIndex(x=>x.id===e.id);
+    if(i>=0)out.exams[i]=Object.assign({},out.exams[i],e,{scores:Object.assign({},out.exams[i].scores,e.scores)});
+    else out.exams.push(e);});
+  (imp.actions||[]).forEach(a=>{const i=out.actions.findIndex(x=>x.id===a.id);if(i>=0)out.actions[i]=a;else out.actions.push(a);});
+  out.students.sort((a,b)=>a.name.localeCompare(b.name,'fa'));
+}
+
+/* ================= UI ================= */
+let TAB='dash',MON=null,SUBENTRY='daily',DASHCLS='',EDITEXAM=null,OVMON=null,OVCLS='',OVSID='';
+const $=id=>document.getElementById(id);
+function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.display='none',2400);}
+function monthSel(id){return monthSelFor(id,MON);}
+function monthSelFor(id,value){return '<div class="f" style="max-width:200px"><label>ماه (شمسی)</label><select id="'+id+'">'+monthList().map(m=>'<option value="'+m+'"'+(m===value?' selected':'')+'>'+mlabel(m)+'</option>').join('')+'</select></div>';}
+function badge(o){const c=classify(o);return '<span class="b '+c.c+'">'+c.l+'</span>';}
+function line(labels,vals){
+  const W=520,H=170,P=28,n=labels.length,xs=i=>P+i*(W-2*P)/Math.max(1,n-1),ys=v=>H-P-(v/100)*(H-2*P);
+  let pts=vals.map((v,i)=>v==null?null:[xs(i),ys(v)]);
+  let g='',path='',pen=false;
+  [0,50,100].forEach(v=>g+='<line x1="'+P+'" x2="'+(W-P)+'" y1="'+ys(v)+'" y2="'+ys(v)+'" stroke="#e3e7ee"/><text x="4" y="'+(ys(v)+4)+'" font-size="10" fill="#6b7684">'+v+'</text>');
+  pts.forEach(p=>{if(!p){pen=false;return;}path+=(pen?'L':'M')+p[0]+' '+p[1]+' ';pen=true;});
+  const dots=pts.map((p,i)=>p?'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3.5" fill="#2f5fd8"/><text x="'+p[0]+'" y="'+(p[1]-8)+'" font-size="10" text-anchor="middle" fill="#1c2430">'+r1(vals[i])+'</text>':'').join('');
+  const lb=labels.map((l,i)=>'<text x="'+xs(i)+'" y="'+(H-8)+'" font-size="10" text-anchor="middle" fill="#6b7684">'+esc(l)+'</text>').join('');
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'<path d="'+path+'" fill="none" stroke="#2f5fd8" stroke-width="2"/>'+dots+lb+'</svg>';
+}
+function trend(sid,m){const ms=[];for(let i=5;i>=0;i--)ms.push(addM(m,-i));return {ms,vals:ms.map(x=>sid?compute(sid,x).overall:schoolAvg(x))};}
+function schoolAvg(m){return avg(active().map(s=>compute(s.id,m).overall).filter(v=>v!=null));}
+
+function show(t){TAB=t;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));banner();({dash:vDash,entry:vEntry,follow:vFollow,manage:vManage})[t]();window.scrollTo(0,0);}
+function banner(){
+  let h='';const days=S.lastBackup?Math.floor((Date.now()-S.lastBackup)/86400000):null;
+  if(S.students.length&&(days==null||days>=7))h='<div class="warn"><span>⚠️ '+(days==null?'هنوز هیچ نسخه پشتیبانی دانلود نکرده‌اید.':'آخرین نسخه پشتیبان '+days+' روز پیش بوده است.')+' برای امنیت داده‌ها یک نسخه ذخیره کنید.</span><button class="btn p" onclick="doBackup()">دانلود نسخه پشتیبان</button></div>';
+  $('banner').innerHTML=h;
+}
+
+/* ---- داشبورد و گزارش ---- */
+function vDash(){
+  if(!MON)MON=monthList()[0];
+  const st=active().filter(s=>!DASHCLS||s.cls===DASHCLS),rs=st.map(s=>compute(s.id,MON));
+  const all=active().map(s=>compute(s.id,MON));
+  const ov=rs.map(r=>r.overall).filter(v=>v!=null),prevAvg=avg(st.map(s=>compute(s.id,addM(MON,-1)).overall).filter(v=>v!=null));
+  const cnt={e:0,g:0,a:0,f:0,u:0};rs.forEach(r=>cnt[classify(r.overall).c]++);
+  const ca=k=>avg(rs.map(r=>r[CKEY[k]]).filter(v=>v!=null));
+  const wc={};rs.forEach(r=>weak(r).forEach(w=>wc[w]=(wc[w]||0)+1));
+  const tw=Object.entries(wc).sort((a,b)=>b[1]-a[1]);
+  const tr=trend(null,MON);const A=avg(ov);
+  $('view').innerHTML=`
+  <div class="row noprint">${monthSel('dm')}
+    <div class="f" style="max-width:200px"><label>کلاس/رشته</label><select id="dc"><option value="">همه</option>${CLASSES.map(c=>'<option'+(DASHCLS===c?' selected':'')+'>'+c+'</option>').join('')}</select></div>
+    <button class="btn" onclick="window.print()">🖨 چاپ گزارش ماهانه</button></div>
+  <h3>گزارش ${mlabel(MON)}${DASHCLS?' — '+DASHCLS:''}</h3>
+  ${S.students.length?'':'<div class="card">هنوز دانش‌آموزی ثبت نشده. از تب «مدیریت» شروع کنید.</div>'}
+  <div class="grid g4">
+    <div class="card stat"><div class="l">تعداد دانش‌آموزان</div><div class="v">${st.length}</div></div>
+    <div class="card stat"><div class="l">میانگین عملکرد</div><div class="v">${F(A)}</div><div class="mu">تغییر نسبت به ماه قبل: ${A!=null&&prevAvg!=null?(A-prevAvg>=0?'+':'')+r1(A-prevAvg):'—'}</div></div>
+    <div class="card stat"><div class="l">نیازمند پیگیری / نیاز به توجه</div><div class="v">${cnt.f} / ${cnt.a}</div></div>
+    <div class="card stat"><div class="l">کامل‌بودن داده‌ها</div><div class="v">${F(avg(rs.map(r=>r.completeness)))}٪</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:12px">
+    <div class="card"><h3>توزیع وضعیت</h3>${[['e','عالی'],['g','خوب'],['a','نیاز به توجه'],['f','نیازمند پیگیری'],['u','داده ناکافی']].map(([k,l])=>'<div style="display:flex;gap:8px;align-items:center;margin:6px 0"><span class="b '+k+'" style="min-width:110px;text-align:center">'+l+'</span><div class="bar" style="flex:1"><div style="width:'+(st.length?cnt[k]/st.length*100:0)+'%"></div></div><b>'+cnt[k]+'</b></div>').join('')}</div>
+    <div class="card"><h3>میانگین هر شاخص</h3>${Object.keys(COMP).map(k=>'<div style="display:flex;gap:8px;align-items:center;margin:6px 0"><span style="min-width:110px">'+COMP[k]+'</span><div class="bar" style="flex:1"><div style="width:'+Math.max(0,Math.min(100,ca(k)||0))+'%"></div></div><b>'+F(ca(k))+'</b></div>').join('')}</div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h3>میانگین کلاس‌ها</h3>${CLASSES.map(c=>{const v=avg(all.filter((r,i)=>active()[i].cls===c).map(r=>r.overall).filter(x=>x!=null));return '<div style="display:flex;gap:8px;align-items:center;margin:6px 0"><span style="min-width:110px">'+c+'</span><div class="bar" style="flex:1"><div style="width:'+Math.max(0,Math.min(100,v||0))+'%"></div></div><b>'+F(v)+'</b></div>';}).join('')}</div>
+    <div class="card"><h3>پرتکرارترین نقاط ضعف</h3>${tw.length?tw.slice(0,5).map(([l,n])=>'<div style="display:flex;justify-content:space-between;padding:4px 0"><span>'+l+'</span><b>'+n+' نفر</b></div>').join(''):'<span class="mu">مورد قابل‌توجهی نیست.</span>'}</div>
+  </div>
+  <div class="card"><h3>روند ۶ ماه اخیر مدرسه</h3>${line(tr.ms.map(m=>JM[+m.split('-')[1]-1]),tr.vals)}</div>
+  <div class="card"><h3>وضعیت دانش‌آموزان <span class="mu">(برای گزارش فردی روی نام کلیک کنید — ترتیب الفبایی است)</span></h3>
+  <div class="tw"><table><thead><tr><th>نام</th><th>کلاس</th><th>امتیاز</th><th>وضعیت</th><th>تغییر</th><th>داده</th><th>نقاط ضعف</th></tr></thead><tbody>
+  ${st.map((s,i)=>{const r=rs[i],p=compute(s.id,addM(MON,-1));return '<tr><td><a href="#" onclick="stReport(\''+s.id+'\');return false">'+esc(s.name)+'</a></td><td>'+esc(s.cls)+'</td><td>'+F(r.overall)+'</td><td>'+badge(r.overall)+'</td><td>'+(r.overall!=null&&p.overall!=null?(r.overall-p.overall>=0?'+':'')+r1(r.overall-p.overall):'—')+'</td><td>'+r.completeness+'٪</td><td class="mu" style="white-space:normal">'+esc(weak(r).join('، ')||'—')+'</td></tr>';}).join('')}
+  </tbody></table></div></div>`;
+  $('dm').onchange=e=>{MON=e.target.value;vDash();};$('dc').onchange=e=>{DASHCLS=e.target.value;vDash();};
+}
+function stReport(sid){
+  const s=stById(sid),c=compute(sid,MON),p=compute(sid,addM(MON,-1)),rs=reasons(sid,MON),w=weak(c),tr=trend(sid,MON);
+  const rows=[['آزمون صبحگاهی','morningScore'],['آزمون تشریحی — عمومی','generalScore'],['آزمون تشریحی — تخصصی','specialScore'],['آزمون تشریحی — مجموع','weeklyScore'],['ساعت مطالعه','studyScore'],['ثبت مطالعه','loggingScore'],['خودارزیابی کیفیت مطالعه','qualityScore'],['عملکرد کلاسی','classroomScore']];
+  const strong=Object.keys(COMP).filter(k=>c[CKEY[k]]!=null&&c[CKEY[k]]>=S.cfg.thresholds.good).map(k=>COMP[k]);
+  const acts=S.actions.filter(a=>a.sid===sid).sort((a,b)=>a.date<b.date?1:-1).slice(0,3);
+  const bg=document.createElement('div');bg.className='mbg';
+  bg.innerHTML=`<div class="modal"><div style="display:flex;justify-content:space-between"><div><h3 style="margin:0">${esc(s.name)}</h3><span class="mu">${esc(s.cls)} — ${mlabel(MON)}</span></div><div style="text-align:left"><div style="font-size:26px;font-weight:800">${F(c.overall)}</div>${badge(c.overall)}</div></div>
+  <p class="mu">تغییر نسبت به ماه قبل: ${c.overall!=null&&p.overall!=null?r1(c.overall-p.overall):'—'} — کامل‌بودن داده: ${c.completeness}٪</p>
+  <table><tbody>${rows.map(([l,k])=>'<tr><td>'+l+'</td><td>'+F(c[k])+(c[k]==null?' <span class="mu">(بدون داده)</span>':'')+'</td></tr>').join('')}
+  <tr><td>نرخ انجام تکالیف</td><td>${F(c.hwRate)}${c.hwRate!=null?'٪':''}</td></tr><tr><td>تعداد اخراج از کلاس</td><td>${c.exp}</td></tr><tr><td>میانگین مطالعه روزانه / هدف</td><td>${F(c.avgH)} / ${c.goal} ساعت</td></tr></tbody></table>
+  <p><b>نقاط قوت:</b> ${esc(strong.join('، ')||'—')}<br><b>نقاط ضعف:</b> ${esc(w.join('، ')||'—')}</p>
+  ${line(tr.ms.map(m=>JM[+m.split('-')[1]-1]),tr.vals)}
+  <b>پیشنهاد پیگیری:</b>${rs.length?'<ul class="r">'+rs.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':' <span class="mu">موردی شناسایی نشد.</span>'}
+  ${acts.length?'<b>آخرین اقدامات:</b><ul class="r">'+acts.map(a=>'<li>'+jdate(a.date)+': '+esc(a.action||a.problem)+' ('+esc(a.status)+')</li>').join('')+'</ul>':''}
+  <div class="noprint" style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="pr1">چاپ گزارش داخلی</button><button class="btn" id="cardBtn">🎓 کارنامه برای تحویل به دانش‌آموز</button><button class="btn" id="cl">بستن</button></div></div>`;
+  document.body.appendChild(bg);bg.querySelector('#cl').onclick=()=>bg.remove();
+  bg.querySelector('#pr1').onclick=()=>window.print();
+  bg.querySelector('#cardBtn').onclick=()=>{bg.remove();studentCard(sid);};
+}
+const COMP_ICON={morning:'🌅',weekly:'📝',study:'⏱️',logging:'📔',quality:'⭐',classroom:'🏫'};
+function studentCard(sid){
+  const s=stById(sid),c=compute(sid,MON),tr=trend(sid,MON);
+  const fr=(S.cfg.cardMsg&&S.cfg.cardMsg[classify(c.overall).c])||{t:'',s:''};
+  const strong=Object.keys(COMP).filter(k=>c[CKEY[k]]!=null&&c[CKEY[k]]>=S.cfg.thresholds.good);
+  const weakK=Object.keys(COMP).filter(k=>c[CKEY[k]]!=null&&c[CKEY[k]]<S.cfg.thresholds.attention);
+  const tipK=weakK[0]||Object.keys(COMP).filter(k=>c[CKEY[k]]!=null).sort((a,b)=>c[CKEY[a]]-c[CKEY[b]])[0];
+  const tipTxt={morning:'صبح‌ها چند دقیقه زودتر آزمون صبحگاهی را مرور کن.',weekly:'قبل از آزمون‌های تشریحی، خلاصه درس‌ها را یک‌بار دوره کن.',
+    study:'سعی کن ساعت مطالعه‌ات را به هدف تعیین‌شده نزدیک‌تر کنی.',logging:'هر شب چند خط درباره‌ی مطالعه‌ی امروزت در دفتر بنویس.',
+    quality:'موقع مطالعه محیط آرام‌تری انتخاب کن تا کیفیتش بالاتر بره.',classroom:'روی انجام کامل تکالیف کلاسی تمرکز کن.'};
+  const ov=Math.round(c.overall||0),ang=Math.max(0,Math.min(100,c.overall||0))*3.6;
+  const color=c.overall==null?'#c9cfd8':c.overall>=S.cfg.thresholds.excellent?'#1f9d5a':c.overall>=S.cfg.thresholds.good?'#2f5fd8':c.overall>=S.cfg.thresholds.attention?'#e0a72c':'#d6473f';
+  const ov2=document.createElement('div');ov2.id='cardOv';
+  ov2.style.cssText='position:fixed;inset:0;background:linear-gradient(160deg,#eef2fb,#fdf6ee);z-index:80;overflow:auto;padding:22px 12px;';
+  ov2.innerHTML=`
+  <div class="noprint" style="max-width:640px;margin:0 auto 12px;display:flex;gap:8px;justify-content:flex-end">
+   <button class="btn p" onclick="window.print()">🖨 چاپ کارنامه</button><button class="btn" id="cardCl">بستن</button></div>
+  <div style="max-width:640px;margin:0 auto;background:#fff;border-radius:20px;padding:26px 24px;box-shadow:0 8px 30px rgba(20,30,60,.12);font-family:inherit">
+   <div style="text-align:center;margin-bottom:6px"><div style="font-size:13px;color:#6b7684">کارنامه‌ی عملکرد تحصیلی</div>
+   <div style="font-size:24px;font-weight:800;margin:4px 0">${esc(s.name)}</div>
+   <div style="color:#6b7684">${esc(s.cls)} — ${mlabel(MON)}</div></div>
+   <div style="display:flex;justify-content:center;margin:18px 0">
+    <div style="width:150px;height:150px;border-radius:50%;background:conic-gradient(${color} ${ang}deg,#eef0f3 0);display:flex;align-items:center;justify-content:center">
+     <div style="width:118px;height:118px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div style="font-size:32px;font-weight:800;color:${color}">${c.overall==null?'—':ov}</div><div style="font-size:11px;color:#6b7684">از ۱۰۰</div></div></div></div>
+   ${(fr.t||fr.s)?`<div style="text-align:center;margin-bottom:18px">${fr.t?'<div style="font-weight:800;font-size:16px">'+esc(fr.t)+'</div>':''}${fr.s?'<div style="color:#6b7684;font-size:13px;margin-top:4px">'+esc(fr.s)+'</div>':''}</div>`:''}
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+    ${Object.keys(COMP).map(k=>{const v=c[CKEY[k]];return `<div style="background:#f7f8fb;border-radius:12px;padding:10px 12px">
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span>${COMP_ICON[k]} ${COMP[k]}</span><b>${v==null?'—':r1(v)}</b></div>
+      <div class="bar" style="margin-top:6px"><div style="width:${Math.max(0,Math.min(100,v||0))}%;background:${color}"></div></div></div>`;}).join('')}
+   </div>
+   ${strong.length?`<div style="background:#e6f7ee;border-radius:12px;padding:10px 14px;margin-bottom:10px"><b>✅ نقاط قوت این ماه:</b> ${strong.map(k=>COMP[k]).join('، ')}</div>`:''}
+   ${tipK?`<div style="background:#fdf3e0;border-radius:12px;padding:10px 14px;margin-bottom:10px"><b>💡 پیشنهاد این ماه:</b> ${tipTxt[tipK]}</div>`:''}
+   <div style="margin:14px 0">${line(tr.ms.map(m=>JM[+m.split('-')[1]-1]),tr.vals)}</div>
+   <div style="display:flex;justify-content:space-between;margin-top:24px;font-size:12px;color:#6b7684">
+    <div>امضای معلم: ____________</div><div>امضای ولی: ____________</div><div>تاریخ: ${jdate(todayISO())}</div></div>
+   <div style="text-align:center;margin-top:10px;font-size:10px;color:#b8bfca">سامانه عملکرد تحصیلی — طراحی: امیرمحمد عزت‌پور</div>
+  </div>`;
+  document.body.appendChild(ov2);ov2.querySelector('#cardCl').onclick=()=>ov2.remove();
+}
+
+/* ---- ثبت داده ---- */
+function vEntry(){
+  $('view').innerHTML='<div class="sub"><button class="btn'+(SUBENTRY==='daily'?' p':'')+'" onclick="SUBENTRY=\'daily\';vEntry()">ثبت روزانه</button><button class="btn'+(SUBENTRY==='exam'?' p':'')+'" onclick="SUBENTRY=\'exam\';vEntry()">آزمون تشریحی</button><button class="btn'+(SUBENTRY==='overview'?' p':'')+'" onclick="SUBENTRY=\'overview\';vEntry()">🔍 نمای ثبت‌ها</button></div><div id="ent"></div>';
+  if(SUBENTRY==='daily')entDaily(todayISO(),'');else if(SUBENTRY==='exam')entExam();else entOverview();
+}
+function entDaily(date,cls){
+  const st=active().filter(s=>!cls||s.cls===cls),day=S.days[date]||{};
+  const sel=(v,opts)=>opts.map(([k,l])=>'<option value="'+k+'"'+(String(v)===String(k)?' selected':'')+'>'+l+'</option>').join('');
+  $('ent').innerHTML=`<div class="card"><div class="row">
+   <div class="f"><label>تاریخ</label>${jalaliInputHTML('dd',date)}</div>
+   <div class="f"><label>کلاس/رشته</label><select id="dcl"><option value="">همه</option>${CLASSES.map(c=>'<option'+(cls===c?' selected':'')+'>'+c+'</option>').join('')}</select></div>
+   <div class="f" style="max-width:220px"><label>جستجو</label><input id="dq" placeholder="نام دانش‌آموز…"></div>
+   <button class="btn p" id="sv">ذخیره همه</button>
+   <button class="btn d" id="clrDay">🗑 حذف داده‌های این روز</button>
+   <button class="btn" id="impXl">📥 وارد کردن آزمون صبحگاهی از اکسل</button></div>
+   <div class="mu" style="margin-bottom:8px">سلول خالی = «داده ثبت نشده» و هرگز صفر حساب نمی‌شود. اگر دانش‌آموزی غایب بود تیک «غایب» را بزنید. فرمت ساعت مطالعه: اول ساعت سپس نقطه سپس دقیقه — مثلاً <b>1.30</b> یعنی یک ساعت و سی دقیقه (نه عدد اعشاری). درصد آزمون صبحگاهی در صورت نمره‌ی منفی (به‌دلیل جریمه‌ی پاسخ غلط) می‌تواند عدد منفی هم باشد. کل ورود اطلاعات بدون نیاز به ماوس انجام می‌شود: فوکوس از ابتدا روی اولین خانه است، Tab بین خانه‌های یک ردیف و Enter برای رفتن به همان ستون در ردیف بعدی حرکت می‌کند، و با Enter روی آخرین خانه‌ی آخرین ردیف، اطلاعات خودکار ذخیره می‌شود. (Ctrl+S هم هر زمان ذخیره می‌کند)</div>
+   <div class="tw" style="max-height:68vh"><table><thead><tr><th>نام</th><th>آزمون صبحگاهی ٪</th><th>غایب</th><th>ساعت مطالعه</th><th>ستاره (۰–۳)</th><th>دفتر مطالعه</th><th>تکلیف</th><th>اخراج</th><th></th></tr></thead><tbody>
+   ${st.map(s=>{const r=day[s.id]||{};return '<tr data-id="'+s.id+'" data-nm="'+esc(s.name)+'"><td>'+esc(s.name)+'</td>'
+    +'<td><input type="number" max="100" step="0.5" class="q" value="'+(r.q!=null?r.q:'')+'"></td>'
+    +'<td><input type="checkbox" class="qa"'+(r.qa?' checked':'')+'></td>'
+    +'<td><input type="text" inputmode="decimal" class="h" placeholder="مثلاً 1.30" value="'+(r.h!=null?formatHM(r.h):'')+'"></td>'
+    +'<td><select class="s">'+sel(r.s==null?'':r.s,[['','—'],[0,'0'],[1,'1'],[2,'2'],[3,'3']])+'</select></td>'
+    +'<td><select class="lg">'+sel(r.lg==null?'':r.lg,[['','—'],[1,'ثبت شد'],[0,'ثبت نشد']])+'</select></td>'
+    +'<td><select class="hw">'+sel(r.hw==null?'':r.hw,[['','—'],[1,'انجام داد'],[0,'انجام نداد']])+'</select></td>'
+    +'<td><input type="number" min="0" step="1" class="ex" value="'+(r.ex!=null?r.ex:'')+'"></td>'
+    +'<td>'+(Object.keys(r).length?'<button type="button" class="btn d small rowdel" data-id="'+s.id+'" title="حذف رکورد این دانش‌آموز در این روز">🗑</button>':'')+'</td></tr>';}).join('')||'<tr><td colspan="9" class="mu">دانش‌آموزی نیست.</td></tr>'}
+   </tbody></table></div></div>`;
+  wireJalali('dd',iso=>entDaily(iso,$('dcl').value));
+  $('dcl').onchange=e=>entDaily(isoOf('dd'),e.target.value);
+  $('clrDay').onclick=()=>{
+    const ids=st.map(s=>s.id).filter(id=>day[id]);
+    if(!ids.length){toast('برای این روز (در فیلتر فعلی) داده‌ای ثبت نشده است.');return;}
+    if(!confirm('داده‌ی '+ids.length+' دانش‌آموز در تاریخ '+jdate(date)+' حذف شود؟ این کار قابل بازگشت نیست.'))return;
+    ids.forEach(id=>delete day[id]);
+    if(Object.keys(day).length)S.days[date]=day;else delete S.days[date];
+    saveState();toast('داده‌های این روز حذف شد.');entDaily(date,cls);
+  };
+  document.querySelectorAll('#ent .rowdel').forEach(b=>b.onclick=()=>{
+    const sid=b.dataset.id,nm=stById(sid).name;
+    if(!confirm('رکورد «'+nm+'» در تاریخ '+jdate(date)+' حذف شود؟'))return;
+    delOneRecord(date,sid);toast('حذف شد.');entDaily(date,cls);
+  });
+  $('impXl').onclick=()=>importMorningModal(date,cls);
+  $('dq').oninput=e=>{const q=e.target.value.trim();document.querySelectorAll('#ent tbody tr[data-nm]').forEach(tr=>{tr.style.display=!q||tr.dataset.nm.includes(q)?'':'none';});};
+  $('ent').onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();$('sv').click();}};
+  const COLS=['q','qa','h','s','lg','hw','ex'];
+  function nextRowCell(tr,col){ // ردیف قابل‌مشاهده‌ی بعدی در همان ستون (برای ورود سریع ستونی، مثل آزمون صبحگاهی)
+    let n=tr.nextElementSibling;
+    while(n && n.style.display==='none')n=n.nextElementSibling;
+    return n ? n.querySelector('.'+col) : null;
+  }
+  document.querySelectorAll('#ent tbody tr').forEach(tr=>{ // ثبت خودکار «دفتر ثبت شد» با وارد کردن ساعت/ستاره
+    const auto=()=>{const l=tr.querySelector('.lg');if(l.value==='')l.value='1';};
+    tr.querySelector('.h').addEventListener('input',auto);tr.querySelector('.s').addEventListener('change',auto);
+    tr.querySelector('.qa').addEventListener('change',e=>{if(e.target.checked)tr.querySelector('.q').value='';});
+    tr.querySelector('.q').addEventListener('input',e=>{if(e.target.value!=='')tr.querySelector('.qa').checked=false;});
+    COLS.forEach(col=>{
+      const el=tr.querySelector('.'+col); if(!el)return;
+      el.addEventListener('keydown',e=>{
+        if(e.key==='Enter'){ e.preventDefault();
+          const nx=nextRowCell(tr,col);
+          if(nx){ nx.focus(); if(nx.select) nx.select(); }
+          else if(col===COLS[COLS.length-1]){ $('sv').click(); } // پایان آخرین ستون در آخرین ردیف = ذخیره خودکار
+        }
+      });
+      if(el.tagName==='SELECT'||el.type==='checkbox'){ // انتخاب از لیست هم خودکار به سطر بعدی همان ستون برود
+        el.addEventListener('change',()=>{ const nx=nextRowCell(tr,col); if(nx){ nx.focus(); if(nx.select) nx.select(); } });
+      }
+    });
+  });
+  { // فوکوس خودکار روی اولین خانه‌ی قابل‌مشاهده برای شروع ورود اطلاعات بدون نیاز به ماوس
+    const firstQ=document.querySelector('#ent tbody tr[data-id]:not([style*="display: none"]) .q');
+    if(firstQ) firstQ.focus();
+  }
+  $('sv').onclick=()=>{
+    const d=isoOf('dd');if(!d){toast('تاریخ نامعتبر است');return;}
+    const rec={...(S.days[d]||{})},errs=[];
+    document.querySelectorAll('#ent tbody tr[data-id]').forEach(tr=>{
+      const id=tr.dataset.id,nm=stById(id).name,g=c=>tr.querySelector(c).value,r={};
+      if(tr.querySelector('.qa').checked)r.qa=1;
+      else if(g('.q')!==''){const v=+g('.q');if(isNaN(v)||v>100){errs.push(nm+': درصد نمی‌تواند بیشتر از ۱۰۰ باشد');return;}r.q=v;}
+      if(g('.h')!==''){const p=parseHM(g('.h'));if(!p||p.invalid){errs.push(nm+': فرمت ساعت مطالعه نامعتبر است (مثال درست: 1.30 یعنی یک ساعت و سی دقیقه)');return;}r.h=p.value;}
+      if(g('.s')!=='')r.s=+g('.s');
+      if(g('.lg')!=='')r.lg=+g('.lg');
+      if(g('.hw')!=='')r.hw=+g('.hw');
+      if(g('.ex')!==''){const v=+g('.ex');if(isNaN(v)||v<0||!Number.isInteger(v)){errs.push(nm+': تعداد اخراج نامعتبر');return;}r.ex=v;}
+      if(Object.keys(r).length)rec[id]=r;else delete rec[id];
+    });
+    if(errs.length){alert('خطا در ورود اطلاعات:\n'+errs.slice(0,8).join('\n'));return;}
+    if(Object.keys(rec).length)S.days[d]=rec;else delete S.days[d];
+    if(saveState())toast('ذخیره شد ✓');
+  };
+}
+function entExam(){
+  const e=EDITEXAM?S.exams.find(x=>x.id===EDITEXAM):null,st=active();
+  $('ent').innerHTML=`<div class="card"><h3>${e?'ویرایش آزمون':'آزمون جدید'}</h3><div class="row">
+   <div class="f"><label>تاریخ</label>${jalaliInputHTML('xd',e?e.date:todayISO())}</div>
+   <div class="f"><label>عنوان</label><input id="xt" value="${e?esc(e.title):''}"></div>
+   <div class="f"><label>نوع</label><select id="xy"><option value="general"${e&&e.type==='general'?' selected':''}>عمومی</option><option value="specialized"${e&&e.type==='specialized'?' selected':''}>تخصصی</option></select></div>
+   <div class="f"><label>درس (اختیاری)</label><input id="xs" value="${e?esc(e.subject||''):''}"></div>
+   <div class="f" style="max-width:110px"><label>نمره کل</label><input type="number" id="xm" value="${e?e.total:20}"></div></div>
+   <div class="mu" style="margin-bottom:8px">نمره را فقط برای دانش‌آموزانی که شرکت کرده‌اند بنویسید؛ خالی = شرکت نکرده (در میانگین صفر حساب نمی‌شود). در هر خانه عدد را بنویسید و Enter بزنید تا به ردیف بعدی بروید؛ Enter روی آخرین ردیف، آزمون را ذخیره می‌کند.</div>
+   <div class="tw" style="max-height:55vh"><table><thead><tr><th>نام</th><th>کلاس</th><th>نمره</th></tr></thead><tbody>
+   ${st.map(s=>'<tr data-id="'+s.id+'"><td>'+esc(s.name)+'</td><td>'+esc(s.cls)+'</td><td><input type="number" step="0.01" class="sc" value="'+(e&&e.scores[s.id]!=null?e.scores[s.id]:'')+'"></td></tr>').join('')}</tbody></table></div>
+   <div style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="xsv">ذخیره آزمون</button>${e?'<button class="btn" id="xc">انصراف</button>':''}</div></div>
+   <div class="card"><h3>آزمون‌های ثبت‌شده</h3><div class="tw"><table><thead><tr><th>تاریخ</th><th>عنوان</th><th>نوع</th><th>شرکت‌کنندگان</th><th></th></tr></thead><tbody>
+   ${[...S.exams].sort((a,b)=>a.date<b.date?1:-1).slice(0,40).map(x=>'<tr><td>'+jdate(x.date)+'</td><td>'+esc(x.title)+'</td><td>'+(x.type==='general'?'عمومی':'تخصصی')+'</td><td>'+Object.keys(x.scores).length+'</td><td><button class="btn" onclick="EDITEXAM=\''+x.id+'\';entExam()">ویرایش</button> <button class="btn d" onclick="delExam(\''+x.id+'\')">حذف</button></td></tr>').join('')||'<tr><td colspan="5" class="mu">هنوز آزمونی ثبت نشده.</td></tr>'}</tbody></table></div></div>`;
+  if($('xc'))$('xc').onclick=()=>{EDITEXAM=null;entExam();};
+  wireJalali('xd');
+  document.querySelectorAll('#ent tbody tr[data-id] .sc').forEach(el=>{
+    el.addEventListener('keydown',ev=>{
+      if(ev.key!=='Enter')return;ev.preventDefault();
+      let tr=el.closest('tr'),n=tr.nextElementSibling;
+      const nx=n?n.querySelector('.sc'):null;
+      if(nx){nx.focus();nx.select();}else{$('xsv').click();}
+    });
+  });
+  { const firstSc=document.querySelector('#ent tbody tr[data-id] .sc'); if(firstSc) firstSc.focus(); }
+  $('xsv').onclick=()=>{
+    const d=isoOf('xd'),t=$('xt').value.trim(),tot=+$('xm').value,sc={},errs=[];
+    if(!d||!t){toast('تاریخ و عنوان لازم است');return;}
+    if(!(tot>0)){toast('نمره کل نامعتبر است');return;}
+    document.querySelectorAll('#ent tr[data-id]').forEach(tr=>{const v=tr.querySelector('.sc').value;if(v==='')return;const n=+v;
+      if(isNaN(n)||n<0||n>tot)errs.push(stById(tr.dataset.id).name+': نمره باید بین ۰ و '+tot+' باشد');else sc[tr.dataset.id]=n;});
+    if(errs.length){alert(errs.slice(0,8).join('\n'));return;}
+    const obj={id:e?e.id:uid(),date:d,title:t,type:$('xy').value,subject:$('xs').value.trim(),total:tot,scores:sc};
+    if(e)S.exams[S.exams.indexOf(e)]=obj;else S.exams.push(obj);
+    EDITEXAM=null;if(saveState()){toast('آزمون ذخیره شد ✓');entExam();}
+  };
+}
+function delExam(id){if(!confirm('این آزمون حذف شود؟'))return;S.exams=S.exams.filter(x=>x.id!==id);saveState();entExam();}
+
+/* ---- پیگیری ---- */
+function fieldSummary(iso,sid){
+  const r=(S.days[iso]||{})[sid]; if(!r)return[];
+  const p=[];
+  if(r.qa)p.push('آزمون صبحگاهی: غایب'); else if(r.q!=null)p.push('آزمون صبحگاهی: '+r.q+'٪');
+  if(r.h!=null)p.push('مطالعه: '+r.h+' ساعت');
+  if(r.s!=null)p.push('کیفیت مطالعه: '+r.s+'⭐');
+  if(r.lg===1)p.push('دفتر مطالعه: ثبت شد'); else if(r.lg===0)p.push('دفتر مطالعه: ثبت نشد');
+  if(r.hw===1)p.push('تکلیف: انجام داد'); else if(r.hw===0)p.push('تکلیف: انجام نداد');
+  if(r.ex)p.push('اخراج: '+r.ex+' بار');
+  return p;
+}
+function fieldCount(iso,sid){
+  const r=(S.days[iso]||{})[sid]; if(!r)return 0;
+  let n=0; if(r.q!=null||r.qa)n++; if(r.h!=null||r.s!=null||r.lg!=null)n++; if(r.hw!=null||r.ex)n++; return n;
+}
+function cellColor(n){return n===0?'#eef0f3':n===1?'#cfe0fb':n===2?'#8fb6f3':'#2f5fd8';}
+function entOverview(){
+  if(!OVMON)OVMON=monthList()[0];
+  const [jy,jm]=OVMON.split('-').map(Number);
+  const dates=jalaliMonthDates(jy,jm);
+  const st=active().filter(s=>!OVCLS||s.cls===OVCLS);
+  if(!OVSID)OVSID=(S.students[0]&&S.students[0].id)||'';
+  $('ent').innerHTML=`
+   <div class="card">
+    <h3>جستجوی کامل یک دانش‌آموز در همه‌ی تاریخ‌ها</h3>
+    <div class="mu" style="margin-bottom:8px">اگر داده‌ای اشتباهی در تاریخ نادرست ثبت شده و پیدایش نمی‌کنید، دانش‌آموز را انتخاب کنید تا همه‌ی روزهایی که برایش در کل سامانه داده ثبت شده نمایش داده شود (نه فقط این ماه).</div>
+    <div class="row"><div class="f" style="max-width:280px"><label>دانش‌آموز</label><select id="ovs">${S.students.map(s=>'<option value="'+s.id+'"'+(OVSID===s.id?' selected':'')+'>'+esc(s.name)+(s.active===false?' (غیرفعال)':'')+'</option>').join('')||'<option value="">—</option>'}</select></div></div>
+    <div id="ovsList" style="margin-top:10px"></div>
+   </div>
+   <div class="card">
+    <div class="row">${monthSelFor('ovm',OVMON)}<div class="f" style="max-width:200px"><label>کلاس/رشته</label><select id="ovc"><option value="">همه</option>${CLASSES.map(c=>'<option'+(OVCLS===c?' selected':'')+'>'+c+'</option>').join('')}</select></div></div>
+    <h3>نمای ماهانه ثبت‌ها — ${mlabel(OVMON)}</h3>
+    <div class="mu" style="margin-bottom:8px">هر خانه یعنی چند نوع داده (از ۳: آزمون صبحگاهی، مطالعه، عملکرد کلاسی) آن روز برای آن دانش‌آموز ثبت شده — هرچه رنگ تیره‌تر، کامل‌تر. خانه‌ی خالی یعنی اصلاً داده‌ای ثبت نشده. روی هر خانه کلیک کنید تا مستقیم همان روز برای اصلاح باز شود.</div>
+    <div class="tw" style="max-height:65vh"><table><thead><tr><th style="position:sticky;right:0;background:var(--card)">نام</th>${dates.map((d,i)=>'<th style="text-align:center;padding:2px 3px">'+fa2(i+1)+'</th>').join('')}</tr></thead><tbody>
+    ${st.map(s=>'<tr><td style="position:sticky;right:0;background:var(--card)">'+esc(s.name)+'</td>'+dates.map(d=>{const n=fieldCount(d,s.id);return '<td style="padding:2px;text-align:center"><button type="button" class="ovcell" data-d="'+d+'" data-s="'+s.id+'" title="'+esc(fieldSummary(d,s.id).join('، ')||'بدون داده')+'" style="width:22px;height:22px;border-radius:5px;border:1px solid var(--bd);cursor:pointer;background:'+cellColor(n)+'"></button></td>';}).join('')+'</tr>').join('')||'<tr><td class="mu">دانش‌آموزی نیست.</td></tr>'}
+    </tbody></table></div></div>`;
+  $('ovm').onchange=e=>{OVMON=e.target.value;entOverview();};
+  $('ovc').onchange=e=>{OVCLS=e.target.value;entOverview();};
+  $('ovs').onchange=e=>{OVSID=e.target.value;renderOvsList();};
+  document.querySelectorAll('#ent .ovcell').forEach(b=>b.onclick=()=>{
+    const d=b.dataset.d,sid=b.dataset.s,s2=stById(sid);
+    SUBENTRY='daily';vEntry();entDaily(d,s2?s2.cls:'');
+  });
+  renderOvsList();
+}
+function renderOvsList(){
+  const sid=OVSID,el=$('ovsList'); if(!el||!sid)return;
+  const dates=Object.keys(S.days).filter(d=>S.days[d][sid]).sort();
+  el.innerHTML=dates.length?'<div class="tw"><table><thead><tr><th>تاریخ</th><th>جزئیات</th><th></th></tr></thead><tbody>'+
+    dates.map(d=>'<tr><td>'+jdate(d)+'</td><td class="mu" style="white-space:normal">'+esc(fieldSummary(d,sid).join('، '))+'</td><td class="flexwrap" style="display:flex;gap:6px"><button class="btn" data-go="'+d+'">رفتن به این روز</button><button class="btn d" data-del="'+d+'">حذف</button></td></tr>').join('')
+    +'</tbody></table></div>':'<div class="mu">برای این دانش‌آموز هیچ روزی ثبت نشده.</div>';
+  el.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{
+    const d=b.dataset.go,s2=stById(sid);SUBENTRY='daily';vEntry();entDaily(d,s2?s2.cls:'');
+  });
+  el.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    const d=b.dataset.del;
+    if(!confirm('رکورد این دانش‌آموز در '+jdate(d)+' حذف شود؟'))return;
+    delOneRecord(d,sid);toast('حذف شد.');renderOvsList();
+  });
+}
+function vFollow(){
+  if(!MON)MON=monthList()[0];
+  const rows=active().map(s=>({s,c:compute(s.id,MON),r:reasons(s.id,MON)})).filter(x=>x.r.length).sort((a,b)=>(a.c.overall==null?999:a.c.overall)-(b.c.overall==null?999:b.c.overall));
+  const acts=[...S.actions].sort((a,b)=>a.date<b.date?1:-1);
+  $('view').innerHTML=`<div class="row">${monthSel('fm')}</div>
+  <div class="card"><h3>فهرست پیگیری خودکار (${rows.length} نفر)</h3><div class="mu">هدف، شناسایی و کمک به بهبود است، نه رتبه‌بندی.</div>
+  ${rows.map(x=>'<div style="border-top:1px solid var(--bd);padding:10px 0"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>'+esc(x.s.name)+' <span class="mu">'+esc(x.s.cls)+'</span></b><span>'+badge(x.c.overall)+' '+F(x.c.overall)+'</span></div><ul class="r">'+x.r.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul><button class="btn" onclick="actModal(\''+x.s.id+'\')">ثبت اقدام</button></div>').join('')||'<div class="mu" style="padding:12px 0">دانش‌آموزی برای پیگیری ویژه شناسایی نشد.</div>'}</div>
+  <div class="card"><h3>اقدامات ثبت‌شده</h3><div class="tw"><table><thead><tr><th>تاریخ</th><th>دانش‌آموز</th><th>مشکل</th><th>اقدام</th><th>مسئول</th><th>نتیجه</th><th>وضعیت</th><th></th></tr></thead><tbody>
+  ${acts.map(a=>'<tr><td>'+jdate(a.date)+'</td><td>'+esc((stById(a.sid)||{}).name||'—')+'</td><td style="white-space:normal">'+esc(a.problem)+'</td><td style="white-space:normal">'+esc(a.action)+'</td><td>'+esc(a.owner)+'</td><td style="white-space:normal">'+esc(a.result)+'</td><td>'+esc(a.status)+'</td><td><button class="btn" onclick="actModal(null,\''+a.id+'\')">ویرایش</button></td></tr>').join('')||'<tr><td colspan="8" class="mu">هنوز اقدامی ثبت نشده.</td></tr>'}</tbody></table></div></div>`;
+  $('fm').onchange=e=>{MON=e.target.value;vFollow();};
+}
+function actModal(sid,aid){
+  const a=aid?S.actions.find(x=>x.id===aid):{sid,date:todayISO(),problem:'',action:'',owner:'',result:'',status:'در حال پیگیری'};
+  const bg=document.createElement('div');bg.className='mbg';
+  bg.innerHTML=`<div class="modal"><h3>اقدام پیگیری</h3>
+  <div class="row"><div class="f"><label>دانش‌آموز</label><select id="as">${active().map(s=>'<option value="'+s.id+'"'+(a.sid===s.id?' selected':'')+'>'+esc(s.name)+'</option>').join('')}</select></div><div class="f"><label>تاریخ</label>${jalaliInputHTML('ad',a.date)}</div></div>
+  <div class="row"><div class="f"><label>مشکل شناسایی‌شده</label><textarea id="ap" rows="2">${esc(a.problem)}</textarea></div></div>
+  <div class="row"><div class="f"><label>اقدام انجام‌شده</label><textarea id="aa" rows="2">${esc(a.action)}</textarea></div></div>
+  <div class="row"><div class="f"><label>مسئول</label><input id="ao" value="${esc(a.owner)}"></div><div class="f"><label>وضعیت</label><select id="at">${['در حال پیگیری','حل‌شده','نیاز به پیگیری بیشتر'].map(x=>'<option'+(a.status===x?' selected':'')+'>'+x+'</option>').join('')}</select></div></div>
+  <div class="row"><div class="f"><label>نتیجه</label><textarea id="ar" rows="2">${esc(a.result)}</textarea></div></div>
+  <div style="display:flex;gap:8px"><button class="btn p" id="ok">ذخیره</button><button class="btn" id="no">انصراف</button>${aid?'<button class="btn d" id="dl">حذف</button>':''}</div></div>`;
+  document.body.appendChild(bg);bg.querySelector('#no').onclick=()=>bg.remove();
+  wireJalali('ad');
+  if(aid)bg.querySelector('#dl').onclick=()=>{if(confirm('حذف شود؟')){S.actions=S.actions.filter(x=>x.id!==aid);saveState();bg.remove();vFollow();}};
+  bg.querySelector('#ok').onclick=()=>{
+    const o={id:a.id||uid(),sid:$('as').value,date:isoOf('ad'),problem:$('ap').value.trim(),action:$('aa').value.trim(),owner:$('ao').value.trim(),status:$('at').value,result:$('ar').value.trim()};
+    if(!o.problem){toast('مشکل را بنویسید');return;}
+    if(aid)S.actions[S.actions.findIndex(x=>x.id===aid)]=o;else S.actions.push(o);
+    saveState();bg.remove();vFollow();
+  };
+}
+
+/* ---- مدیریت ---- */
+function vManage(){
+  const c=S.cfg;
+  $('view').innerHTML=`
+  <div class="card"><h3>دانش‌آموزان (${active().length} فعال از ${S.students.length})</h3>
+   <div class="row"><div class="f" style="max-width:240px"><input id="stq" placeholder="جستجوی نام…"></div>
+   <button class="btn p" onclick="stModal()">+ افزودن دانش‌آموز</button> <button class="btn" onclick="bulkModal()">افزودن گروهی (چسباندن فهرست)</button></div>
+   <div class="tw" style="margin-top:10px;max-height:50vh"><table><thead><tr><th>نام</th><th>کلاس</th><th>هدف مطالعه</th><th>وضعیت</th><th></th></tr></thead><tbody id="stbody">
+   ${S.students.map(s=>'<tr data-nm="'+esc(s.name)+'"><td>'+esc(s.name)+'</td><td>'+esc(s.cls)+'</td><td>'+(s.goal!=null&&s.goal!==''?s.goal+' ساعت':'<span class="mu">پیش‌فرض</span>')+'</td><td>'+(s.active===false?'غیرفعال':'فعال')+'</td><td><button class="btn" onclick="stModal(\''+s.id+'\')">ویرایش</button></td></tr>').join('')||'<tr><td colspan="5" class="mu">دانش‌آموزی نیست.</td></tr>'}</tbody></table></div></div>
+  <div class="card"><h3>🛡 پشتیبان‌گیری و همکاری چندنفره</h3>
+   <p class="mu">داده‌ها روی همین دستگاه و مرورگر ذخیره می‌شوند و بدون اینترنت کار می‌کنند. سامانه روزی یک نسخه خودکار نگه می‌دارد، اما برای امنیت کامل هفته‌ای یک بار فایل پشتیبان را دانلود و روی فلش/ایمیل نگه دارید.</p>
+   <p class="mu"><b>برای تقسیم کار بین چند نفر:</b> هر همکار روی دستگاه خودش بخشی از دانش‌آموزان را ثبت می‌کند (مثلاً با فیلتر «کلاس/رشته» در جدول ثبت روزانه)، سپس فایل پشتیبان خودش را می‌گیرد. مسئول اصلی این فایل‌ها را یکی‌یکی با گزینه «ادغام» وارد می‌کند تا هیچ داده‌ای پاک نشود.</p>
+   <button class="btn p" onclick="doBackup()">دانلود نسخه پشتیبان</button>
+   <button class="btn" onclick="$('imp').click()">📥 وارد کردن از فایل پشتیبان</button>
+   <input type="file" id="imp" accept=".json" style="display:none">
+  </div>
+  <details class="card"><summary>⚙️ تنظیمات (پیش‌فرض‌ها معمولاً کافی است)</summary>
+   <h3>وزن شاخص‌ها (مجموع باید ۱۰۰ باشد)</h3><div class="grid g3">${Object.keys(COMP).map(k=>'<div><label>'+COMP[k]+'</label><input type="number" id="w_'+k+'" value="'+c.weights[k]+'"></div>').join('')}</div>
+   <p class="mu">وزن‌ها فرضی‌اند و قابل تغییر. اگر داده یک شاخص وجود نداشته باشد، وزن آن به‌طور خودکار بین بقیه پخش می‌شود (نه صفر).</p>
+   <h3>هدف مطالعه روزانه (ساعت)</h3><div class="grid g4"><div><label>پیش‌فرض مدرسه</label><input type="number" step="0.25" id="gd" value="${c.goal}"></div>${CLASSES.map((x,i)=>'<div><label>'+x+'</label><input type="number" step="0.25" id="gc'+i+'" value="'+(c.goalByClass[x]??'')+'" placeholder="پیش‌فرض"></div>').join('')}</div>
+   <h3 style="margin-top:12px">آستانه‌ها و هشدارها</h3><div class="grid g4">
+   <div><label>حداقل «عالی»</label><input type="number" id="t1" value="${c.thresholds.excellent}"></div><div><label>حداقل «خوب»</label><input type="number" id="t2" value="${c.thresholds.good}"></div><div><label>حداقل «نیاز به توجه»</label><input type="number" id="t3" value="${c.thresholds.attention}"></div>
+   <div><label>افت قابل‌توجه (امتیاز)</label><input type="number" id="dr" value="${c.drop}"></div><div><label>جریمه هر اخراج (امتیاز)</label><input type="number" id="pn" value="${c.penalty}"></div></div>
+   <h3 style="margin-top:16px">پیام‌های کارنامه‌ی دانش‌آموز (دلخواه شما — هر دو فیلد را می‌توانید خالی بگذارید تا چیزی نمایش داده نشود)</h3>
+   ${[['e','عالی'],['g','خوب'],['a','نیاز به توجه'],['f','نیازمند پیگیری'],['u','داده ناکافی']].map(([k,l])=>`<div class="row"><div class="f" style="flex:0 0 110px;align-self:center"><b>${l}</b></div>
+     <div class="f"><label>عنوان کوتاه</label><input id="cmt_${k}" value="${esc(c.cardMsg[k].t)}"></div>
+     <div class="f"><label>توضیح</label><input id="cms_${k}" value="${esc(c.cardMsg[k].s)}"></div></div>`).join('')}
+   <button class="btn p" style="margin-top:12px" id="svc">ذخیره تنظیمات</button></details>
+  <div class="card"><h3>راهنمای کوتاه</h3><ol class="r"><li>«مدیریت»: دانش‌آموزان را اضافه کنید.</li><li>«ثبت داده»: هر روز یک جدول برای همه دانش‌آموزان پر کنید؛ برای ورود سریع در هر ستون، عدد را بنویسید و Enter بزنید تا به سطر بعدی همان ستون بروید، سپس یک‌بار «ذخیره همه» بزنید. آزمون‌های تشریحی هم همین‌طور.</li><li>دکمه‌ی «📥 وارد کردن آزمون صبحگاهی از اکسل» در بالای جدول ثبت روزانه: دو ستون «نام» و «درصد» را در اکسل کپی کنید و در پنجره‌ی باز شده بچسبانید (یا فایل CSV اکسل را انتخاب کنید)؛ سامانه نام‌ها را با فهرست دانش‌آموزان تطبیق می‌دهد و پیش از ثبت نهایی، پیش‌نمایش و امکان اصلاح دستی نام‌های تطبیق‌نیافته را نشان می‌دهد.</li><li>«داشبورد و گزارش»: وضعیت مدرسه و گزارش ماهانه؛ روی نام هر دانش‌آموز بزنید تا گزارش فردی باز و قابل چاپ شود.</li><li>«پیگیری»: فهرست خودکار دانش‌آموزان نیازمند توجه و ثبت اقدامات.</li><li>زیرتب «🔍 نمای ثبت‌ها» در «ثبت داده»: یک نمای کلی از روزهای ثبت‌شده‌ی هر دانش‌آموز در هر ماه، و جستجوی کامل تاریخچه‌ی یک دانش‌آموز برای پیدا کردن داده‌ای که اشتباهی در تاریخ نادرست ثبت شده.</li><li>برای حذف داده‌ی یک روز یا یک رکورد اشتباه، از دکمه‌های 🗑 در جدول ثبت روزانه یا در «نمای ثبت‌ها» استفاده کنید.</li><li>همیشه فایل را از همان محل باز کنید و هفته‌ای یک بار پشتیبان بگیرید.</li></ol>
+  <p class="mu" style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px">طراحی و ساخت: <b>امیرمحمد عزت‌پور</b> — تماس: ۰۹۹۳۴۲۹۶۱۹۱. این سامانه کاملاً آفلاین اجرا می‌شود و هیچ داده‌ای به هیچ سروری ارسال نمی‌کند.</p></div>`;
+  $('stq').oninput=e=>{const q=e.target.value.trim();document.querySelectorAll('#stbody tr[data-nm]').forEach(tr=>{tr.style.display=!q||tr.dataset.nm.includes(q)?'':'none';});};
+  $('imp').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{
+    let d;try{d=JSON.parse(r.result);if(!Array.isArray(d.students)||typeof d.days!=='object')throw 0;}catch(x){alert('فایل معتبر نیست.');return;}
+    importChoiceModal(d);
+  };r.readAsText(f);e.target.value='';};
+  $('svc').onclick=()=>{
+    const w={};let t=0;Object.keys(COMP).forEach(k=>{w[k]=+$('w_'+k).value||0;t+=w[k];});
+    if(Math.round(t)!==100){alert('مجموع وزن‌ها '+t+' است؛ باید دقیقاً ۱۰۰ باشد.');return;}
+    const t1=+$('t1').value,t2=+$('t2').value,t3=+$('t3').value;
+    if(!(t1>t2&&t2>t3)){alert('ترتیب آستانه‌ها باید عالی > خوب > نیاز به توجه باشد.');return;}
+    const gb={};CLASSES.forEach((x,i)=>{const v=$('gc'+i).value;if(v!=='')gb[x]=+v;});
+    const cardMsg={};['e','g','a','f','u'].forEach(k=>{cardMsg[k]={t:$('cmt_'+k).value.trim(),s:$('cms_'+k).value.trim()};});
+    S.cfg=Object.assign({},S.cfg,{weights:w,goal:+$('gd').value||2,goalByClass:gb,thresholds:{excellent:t1,good:t2,attention:t3},drop:+$('dr').value||10,penalty:+$('pn').value||0,cardMsg});
+    saveState();toast('تنظیمات ذخیره شد ✓');
+  };
+}
+function stModal(id){
+  const s=id?stById(id):{name:'',cls:CLASSES[0],goal:'',active:true};
+  const bg=document.createElement('div');bg.className='mbg';
+  bg.innerHTML=`<div class="modal"><h3>${id?'ویرایش':'افزودن'} دانش‌آموز</h3>
+  <div class="row"><div class="f"><label>نام و نام‌خانوادگی</label><input id="sn" value="${esc(s.name)}"></div></div>
+  <div class="row"><div class="f"><label>کلاس/رشته</label><select id="sc">${CLASSES.map(c=>'<option'+(s.cls===c?' selected':'')+'>'+c+'</option>').join('')}</select></div>
+  <div class="f"><label>هدف مطالعه اختصاصی (ساعت، اختیاری)</label><input type="number" step="0.25" id="sg" value="${s.goal??''}"></div></div>
+  ${id?'<label><input type="checkbox" id="sa" '+(s.active!==false?'checked':'')+'> فعال</label>':''}
+  <div style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="ok">ذخیره</button><button class="btn" id="no">انصراف</button></div>
+  ${id?'<p class="mu">برای حفظ سوابق، دانش‌آموز حذف نمی‌شود؛ فقط غیرفعال شود.</p>':''}</div>`;
+  document.body.appendChild(bg);bg.querySelector('#no').onclick=()=>bg.remove();
+  bg.querySelector('#ok').onclick=()=>{
+    const n=$('sn').value.trim();if(!n){toast('نام را وارد کنید');return;}
+    const o={id:id||('S'+uid()),name:n,cls:$('sc').value,goal:$('sg').value===''?'':+$('sg').value,active:id?$('sa').checked:true};
+    if(id)S.students[S.students.findIndex(x=>x.id===id)]=o;else S.students.push(o);
+    S.students.sort((a,b)=>a.name.localeCompare(b.name,'fa'));saveState();bg.remove();vManage();
+  };
+}
+function bulkModal(){
+  const bg=document.createElement('div');bg.className='mbg';
+  bg.innerHTML=`<div class="modal"><h3>افزودن گروهی</h3><p class="mu">هر خط یک دانش‌آموز: «نام، کلاس». کلاس باید یکی از این‌ها باشد: ${CLASSES.join(' / ')}. (می‌توانید از Excel کپی کنید)</p><textarea id="bt" rows="10" placeholder="علی احمدی، ریاضی 1"></textarea><div style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="ok">افزودن</button><button class="btn" id="no">انصراف</button></div></div>`;
+  document.body.appendChild(bg);bg.querySelector('#no').onclick=()=>bg.remove();
+  bg.querySelector('#ok').onclick=()=>{
+    const bad=[];let n=0;
+    $('bt').value.split('\n').forEach(l=>{l=l.trim();if(!l)return;const p=l.split(/[,،\t]/).map(x=>x.trim());const cls=CLASSES.find(c=>c===p[1]);
+      if(!p[0]||!cls){bad.push(l);return;}S.students.push({id:'S'+uid(),name:p[0],cls,active:true});n++;});
+    S.students.sort((a,b)=>a.name.localeCompare(b.name,'fa'));saveState();bg.remove();vManage();
+    toast(n+' دانش‌آموز اضافه شد'+(bad.length?' — '+bad.length+' خط نامعتبر رد شد':''));
+  };
+}
+function importChoiceModal(d){
+  const bg=document.createElement('div');bg.className='mbg';
+  bg.innerHTML=`<div class="modal"><h3>وارد کردن فایل پشتیبان</h3>
+  <p>این فایل ${((d.students||[]).length)} دانش‌آموز و ${Object.keys(d.days||{}).length} روز داده دارد. چگونه اعمال شود؟</p>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+    <button class="btn p" id="mrg" style="text-align:right;padding:12px">🔗 ادغام با اطلاعات فعلی <div class="mu" style="margin-top:4px">پیشنهادی — هیچ داده‌ای پاک نمی‌شود؛ رکوردهای جدید اضافه و رکوردهای مشترک به‌روزرسانی می‌شوند. برای جمع‌آوری کار چند نفر استفاده کنید.</div></button>
+    <button class="btn d" id="rep" style="text-align:right;padding:12px">⚠️ جایگزینی کامل <div class="mu" style="margin-top:4px">همه‌ی داده‌های فعلی پاک و با این فایل جایگزین می‌شود.</div></button>
+    <button class="btn" id="no">انصراف</button>
+  </div></div>`;
+  document.body.appendChild(bg);bg.querySelector('#no').onclick=()=>bg.remove();
+  bg.querySelector('#mrg').onclick=()=>{
+    try{localStorage.setItem(LSB[0],localStorage.getItem(LS)||'');}catch(x){}
+    mergeState(d);saveState();bg.remove();toast('ادغام انجام شد ✓');show('manage');
+  };
+  bg.querySelector('#rep').onclick=()=>{
+    if(!confirm('همه داده‌های فعلی با این فایل جایگزین می‌شود و قابل بازگشت نیست (یک نسخه پشتیبان خودکار نگه داشته می‌شود). ادامه می‌دهید؟'))return;
+    try{localStorage.setItem(LSB[0],localStorage.getItem(LS)||'');}catch(x){}
+    S=d;S.cfg=Object.assign({},DEF_CFG,S.cfg||{});S.exams=S.exams||[];S.actions=S.actions||[];saveState();bg.remove();toast('جایگزین شد ✓');show('manage');
+  };
+}
+function doBackup(){
+  const out=Object.assign({},S,{_app:'سامانه عملکرد تحصیلی مدرسه',_creator:'امیرمحمد عزت‌پور',_contact:'09934296191'});
+  const blob=new Blob([JSON.stringify(out)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='school-backup-'+todayISO()+'.json';document.body.appendChild(a);a.click();a.remove();
+  S.lastBackup=Date.now();saveState();banner();toast('فایل پشتیبان دانلود شد ✓');
+}
+
+/* ---- شروع ---- */
+if(typeof document!=='undefined'&&document.getElementById('view')){
+  loadState();autoSnapshot();
+  if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>show(b.dataset.t));
+  window.addEventListener('beforeunload',()=>{});
+  document.addEventListener('mousedown',e=>{if(e.target.classList&&e.target.classList.contains('mbg'))e.target.remove();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.querySelector('.mbg:last-of-type');if(m)m.remove();}});
+  show(S.students.length?'dash':'manage');
+}
+</script>
+</body>
+</html>
