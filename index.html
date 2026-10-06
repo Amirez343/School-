@@ -77,7 +77,6 @@ body:has(#cardOv) main{display:none!important}
     <div class="row"><div class="f"><label>رمز عبور</label><input id="loP" type="password" autocomplete="current-password"></div></div>
     <button class="btn p" id="loBtn" style="width:100%">ورود</button>
     <p class="mu" style="margin-top:10px;text-align:center">این سامانه کاملاً ابری است و بدون اتصال اینترنت و ورود معتبر قابل استفاده نیست.</p>
-    <p class="mu" style="text-align:center"><a href="admin.html">ورود مدیر کل / پنل مدیریت</a></p>
   </div>
 </div>
 <div id="loadingGate" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:150;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--mu)">در حال بارگذاری اطلاعات…</div>
@@ -873,7 +872,7 @@ function vManage(){
      <div class="f"><label>عنوان کوتاه</label><input id="cmt_${k}" value="${esc(c.cardMsg[k].t)}"></div>
      <div class="f"><label>توضیح</label><input id="cms_${k}" value="${esc(c.cardMsg[k].s)}"></div></div>`).join('')}
    <button class="btn p" style="margin-top:12px" id="svc">ذخیره تنظیمات</button>`
-   :'<p class="mu">تنظیمات کلی فقط توسط مدیر سامانه قابل تغییر است. <a href="admin.html">رفتن به پنل مدیریت</a></p>'}</details>
+   :'<p class="mu">تنظیمات کلی فقط توسط مدیر سامانه قابل تغییر است.</p>'}</details>
   <div class="card"><h3>راهنمای کوتاه</h3><ol class="r"><li>«ثبت داده»: هر روز یک جدول برای همه دانش‌آموزان پر کنید؛ برای ورود سریع در هر ستون، عدد را بنویسید و Enter بزنید تا به سطر بعدی همان ستون بروید، سپس یک‌بار «ذخیره همه» بزنید. آزمون‌های تشریحی هم همین‌طور.</li><li>دکمه‌ی «📥 وارد کردن آزمون صبحگاهی از اکسل» در بالای جدول ثبت روزانه: دو ستون «نام» و «درصد» را در اکسل کپی کنید و در پنجره‌ی باز شده بچسبانید (یا فایل CSV اکسل را انتخاب کنید)؛ سامانه نام‌ها را با فهرست دانش‌آموزان تطبیق می‌دهد و پیش از ثبت نهایی، پیش‌نمایش و امکان اصلاح دستی نام‌های تطبیق‌نیافته را نشان می‌دهد.</li><li>«داشبورد و گزارش»: وضعیت مدرسه و گزارش ماهانه؛ روی نام هر دانش‌آموز بزنید تا گزارش فردی باز و قابل چاپ شود.</li><li>«پیگیری»: فهرست خودکار دانش‌آموزان نیازمند توجه و ثبت اقدامات.</li><li>زیرتب «🔍 نمای ثبت‌ها» در «ثبت داده»: یک نمای کلی از روزهای ثبت‌شده‌ی هر دانش‌آموز در هر ماه، و جستجوی کامل تاریخچه‌ی یک دانش‌آموز برای پیدا کردن داده‌ای که اشتباهی در تاریخ نادرست ثبت شده.</li><li>برای حذف داده‌ی یک روز یا یک رکورد اشتباه، از دکمه‌های 🗑 در جدول ثبت روزانه یا در «نمای ثبت‌ها» استفاده کنید.</li></ol>
   <p class="mu" style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px">طراحی و ساخت: <b>امیرمحمد عزت‌پور</b> — تماس: ۰۹۹۳۴۲۹۶۱۹۱.</p></div>`;
   $('stq').oninput=e=>{const q=e.target.value.trim();document.querySelectorAll('#stbody tr[data-nm]').forEach(tr=>{tr.style.display=!q||tr.dataset.nm.includes(q)?'':'none';});};
@@ -963,7 +962,6 @@ async function afterLogin(session){
   $('loginGate').style.display='none';
   $('whoami').textContent='👤 '+prof.display_name+(prof.role==='admin'?' (مدیر)':'');
   $('logoutBtn').style.display='';
-  if(prof.role==='admin'){const a=document.createElement('a');a.href='admin.html';a.className='btn small';a.textContent='⚙️ پنل مدیریت';a.style.marginLeft='6px';$('logoutBtn').before(a);}
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>show(b.dataset.t));
   document.addEventListener('mousedown',e=>{if(e.target.classList&&e.target.classList.contains('mbg'))e.target.remove();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.querySelector('.mbg:last-of-type');if(m)m.remove();}});
