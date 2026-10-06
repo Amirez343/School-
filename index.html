@@ -73,7 +73,7 @@ body:has(#cardOv) main{display:none!important}
   <div class="modal" style="max-width:360px">
     <h3 style="text-align:center">🎓 ورود به سامانه</h3>
     <div id="loginErr" class="mu" style="color:var(--bad);display:none;margin-bottom:8px"></div>
-    <div class="row"><div class="f"><label>ایمیل</label><input id="loE" type="email" autocomplete="username"></div></div>
+    <div class="row"><div class="f"><label>نام‌کاربری</label><input id="loE" type="text" autocomplete="username"></div></div>
     <div class="row"><div class="f"><label>رمز عبور</label><input id="loP" type="password" autocomplete="current-password"></div></div>
     <button class="btn p" id="loBtn" style="width:100%">ورود</button>
     <p class="mu" style="margin-top:10px;text-align:center">این سامانه کاملاً ابری است و بدون اتصال اینترنت و ورود معتبر قابل استفاده نیست.</p>
@@ -976,12 +976,13 @@ async function initAuth(){
 }
 if(typeof document!=='undefined'&&document.getElementById('view')){
   $('loBtn').onclick=async()=>{
-    const email=$('loE').value.trim(),pass=$('loP').value;
-    if(!email||!pass){showLogin('ایمیل و رمز را وارد کنید');return;}
+    const raw=$('loE').value.trim(),pass=$('loP').value;
+    if(!raw||!pass){showLogin('نام‌کاربری و رمز را وارد کنید');return;}
+    const email=raw.includes('@')?raw:(raw.toLowerCase().replace(/\s+/g,'')+'@staff.local');
     $('loBtn').disabled=true;
     const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
     $('loBtn').disabled=false;
-    if(error){showLogin('ورود ناموفق: ایمیل یا رمز اشتباه است.');return;}
+    if(error){showLogin('ورود ناموفق: نام‌کاربری/ایمیل یا رمز اشتباه است.');return;}
     $('loginGate').style.display='none';$('loadingGate').style.display='flex';
     await afterLogin(data.session);
   };

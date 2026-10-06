@@ -64,7 +64,10 @@ const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt
 function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.display='none',2600);}
 function uid(){return (crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now().toString(36)+Math.random().toString(36).slice(2,10));}
 
-let GROUPS=[],STAFF=[],ASSIGN=[]; // ASSIGN: ردیف‌های staff_groups
+let GROUPS=[],STAFF=[],ASSIGN=[],STUDENTS=[]; // ASSIGN: ردیف‌های staff_groups
+const STAFF_DOMAIN='@staff.local'; // ایمیل داخلی و نامرئی؛ مسئولین فقط نام‌کاربری وارد می‌کنند
+function usernameToEmail(u){return u.trim().toLowerCase().replace(/\s+/g,'')+STAFF_DOMAIN;}
+function validUsername(u){return /^[a-z0-9_.]{3,30}$/i.test(u.trim());}
 
 function showLogin(err){
   $('loadingGate').style.display='none';
@@ -91,38 +94,49 @@ async function afterLogin(session){
 }
 
 async function loadAll(){
-  const [gq,pq,aq]=await Promise.all([
+  const [gq,pq,aq,sq]=await Promise.all([
     sb.from('groups').select('*').order('name'),
     sb.from('profiles').select('*').order('display_name'),
-    sb.from('staff_groups').select('*')
+    sb.from('staff_groups').select('*'),
+    sb.from('students').select('id,name,cls,group_id,active')
   ]);
-  for(const r of [gq,pq,aq]) if(r.error) throw r.error;
+  for(const r of [gq,pq,aq,sq]) if(r.error) throw r.error;
   GROUPS=gq.data||[];
   STAFF=(pq.data||[]).filter(p=>p.role!=='admin');
   ASSIGN=aq.data||[];
+  STUDENTS=sq.data||[];
 }
 function groupsOf(staffId){return ASSIGN.filter(a=>a.staff_id===staffId).map(a=>GROUPS.find(g=>g.id===a.group_id)).filter(Boolean);}
 
+function studentsOfGroup(gid){return STUDENTS.filter(s=>s.group_id===gid);}
 function render(){
+  const unassigned=STUDENTS.filter(s=>!s.group_id&&s.active!==false);
   $('view').innerHTML=`
+  <div class="grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+   <div class="card" style="margin:0"><div class="mu">دانش‌آموزان فعال</div><div style="font-size:22px;font-weight:800">${STUDENTS.filter(s=>s.active!==false).length}</div></div>
+   <div class="card" style="margin:0"><div class="mu">زیرگروه‌ها</div><div style="font-size:22px;font-weight:800">${GROUPS.length}</div></div>
+   <div class="card" style="margin:0"><div class="mu">مسئولین</div><div style="font-size:22px;font-weight:800">${STAFF.length}</div></div>
+   <div class="card" style="margin:0"><div class="mu">دانش‌آموزان بدون زیرگروه</div><div style="font-size:22px;font-weight:800;color:${unassigned.length?'var(--bad)':'inherit'}">${unassigned.length}</div></div>
+  </div>
+
   <div class="card"><h3>زیرگروه‌ها (برای تقسیم دانش‌آموزان بین مسئولین)</h3>
    <div class="row"><div class="f"><label>نام زیرگروه جدید</label><input id="ngName" placeholder="مثلاً گروه الف"></div><button class="btn p" id="ngAdd">+ افزودن</button></div>
-   <table><thead><tr><th>نام</th><th></th></tr></thead><tbody>
-   ${GROUPS.map(g=>'<tr><td>'+esc(g.name)+'</td><td><button class="btn d small" data-del="'+g.id+'">حذف</button></td></tr>').join('')||'<tr><td class="mu">هنوز زیرگروهی تعریف نشده.</td></tr>'}
+   <table><thead><tr><th>نام</th><th>تعداد دانش‌آموز</th><th>مسئول(ین)</th><th></th></tr></thead><tbody>
+   ${GROUPS.map(g=>'<tr><td>'+esc(g.name)+'</td><td>'+studentsOfGroup(g.id).length+'</td><td>'+(STAFF.filter(p=>groupsOf(p.id).some(x=>x.id===g.id)).map(p=>esc(p.display_name)).join('، ')||'<span class="mu">—</span>')+'</td><td><button class="btn d small" data-del="'+g.id+'">حذف</button></td></tr>').join('')||'<tr><td colspan="4" class="mu">هنوز زیرگروهی تعریف نشده.</td></tr>'}
    </tbody></table>
   </div>
 
   <div class="card"><h3>مسئولین (کاربرانی که فقط به زیرگروه خودشان دسترسی دارند)</h3>
    <button class="btn p" id="addStaffBtn">+ افزودن مسئول جدید</button>
-   <table style="margin-top:10px"><thead><tr><th>نام</th><th>ایمیل ورود</th><th>زیرگروه‌های تحت مسئولیت</th><th></th></tr></thead><tbody>
-   ${STAFF.map(p=>'<tr data-id="'+p.id+'"><td>'+esc(p.display_name)+'</td><td class="mu">'+esc(p.email||'—')+'</td><td>'+(groupsOf(p.id).map(g=>'<span class="chip">'+esc(g.name)+'</span>').join('')||'<span class="mu">بدون زیرگروه</span>')+'</td><td><button class="btn small" data-edit="'+p.id+'">ویرایش زیرگروه‌ها</button></td></tr>').join('')||'<tr><td colspan="4" class="mu">هنوز مسئولی اضافه نشده.</td></tr>'}
+   <table style="margin-top:10px"><thead><tr><th>نام</th><th>نام‌کاربری ورود</th><th>زیرگروه‌های تحت مسئولیت</th><th></th></tr></thead><tbody>
+   ${STAFF.map(p=>'<tr data-id="'+p.id+'"><td>'+esc(p.display_name)+'</td><td class="mu">'+esc(p.username||'—')+'</td><td>'+(groupsOf(p.id).map(g=>'<span class="chip">'+esc(g.name)+'</span>').join('')||'<span class="mu">بدون زیرگروه</span>')+'</td><td style="display:flex;gap:6px"><button class="btn small" data-edit="'+p.id+'">ویرایش زیرگروه‌ها</button><button class="btn d small" data-rm="'+p.id+'">حذف دسترسی</button></td></tr>').join('')||'<tr><td colspan="4" class="mu">هنوز مسئولی اضافه نشده.</td></tr>'}
    </tbody></table>
-   <p class="mu" style="margin-top:8px">برای غیرفعال‌کردن کامل ورود یک مسئول (نه فقط گرفتن دسترسی)، باید در پنل Supabase، بخش Authentication → Users، آن حساب را حذف یا غیرفعال کنید.</p>
+   <p class="mu" style="margin-top:8px">«حذف دسترسی» فقط پروفایل و زیرگروه‌های او را حذف می‌کند (دیگر به هیچ داده‌ای دسترسی ندارد). برای حذف کامل امکان ورود، در پنل Supabase، بخش Authentication → Users، همان حساب را پاک کنید.</p>
   </div>
 
-  <div class="card"><h3>دانش‌آموزان و زیرگروه‌ها</h3>
-   <p class="mu">اختصاص هر دانش‌آموز به یک زیرگروه از تب «مدیریت» در سامانه اصلی، داخل فرم «ویرایش دانش‌آموز» انجام می‌شود.</p>
-   <a href="index.html" class="btn">رفتن به مدیریت دانش‌آموزان</a>
+  <div class="card"><h3>دانش‌آموزان بدون زیرگروه</h3>
+   ${unassigned.length?'<div class="mu" style="margin-bottom:8px">این‌ها به هیچ مسئولی اختصاص نیافته‌اند؛ تا زمانی که زیرگروه نگیرند، فقط مدیر آن‌ها را می‌بیند.</div><table><thead><tr><th>نام</th><th>کلاس</th></tr></thead><tbody>'+unassigned.map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+esc(s.cls||'')+'</td></tr>').join('')+'</tbody></table>':'<div class="mu">همه‌ی دانش‌آموزان فعال به یک زیرگروه اختصاص دارند.</div>'}
+   <a href="index.html" class="btn" style="margin-top:10px">رفتن به مدیریت دانش‌آموزان برای اختصاص زیرگروه</a>
   </div>
   <div class="card"><h3>تنظیمات کلی (وزن شاخص‌ها، آستانه‌ها، پیام‌های کارنامه)</h3>
    <p class="mu">این موارد از تب «مدیریت» در سامانه اصلی، بخش «⚙️ تنظیمات» قابل تغییر است (چون به داده‌های دانش‌آموزان نیاز دارد).</p>
@@ -142,10 +156,22 @@ function render(){
     if(!confirm('این زیرگروه حذف شود؟ دانش‌آموزان آن بدون زیرگروه می‌مانند.'))return;
     const {error}=await sb.from('groups').delete().eq('id',id);
     if(error){toast('خطا: '+error.message);return;}
-    GROUPS=GROUPS.filter(g=>g.id!==id);ASSIGN=ASSIGN.filter(a=>a.group_id!==id);render();toast('حذف شد.');
+    GROUPS=GROUPS.filter(g=>g.id!==id);ASSIGN=ASSIGN.filter(a=>a.group_id!==id);
+    STUDENTS=STUDENTS.map(s=>s.group_id===id?{...s,group_id:null}:s);
+    render();toast('حذف شد.');
   });
   $('addStaffBtn').onclick=()=>staffModal();
   document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>staffModal(b.dataset.edit));
+  document.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{
+    const id=b.dataset.rm,p=STAFF.find(x=>x.id===id);
+    if(!confirm('دسترسی «'+p.display_name+'» حذف شود؟ (حساب ورودش هنوز در Supabase باقی می‌ماند)'))return;
+    const {error:de}=await sb.from('staff_groups').delete().eq('staff_id',id);
+    if(de){toast('خطا: '+de.message);return;}
+    const {error:pe}=await sb.from('profiles').delete().eq('id',id);
+    if(pe){toast('خطا: '+pe.message);return;}
+    STAFF=STAFF.filter(x=>x.id!==id);ASSIGN=ASSIGN.filter(a=>a.staff_id!==id);
+    render();toast('دسترسی حذف شد.');
+  });
 }
 
 function staffModal(staffId){
@@ -155,9 +181,9 @@ function staffModal(staffId){
   bg.innerHTML=`<div class="modal">
    <h3>${existing?'ویرایش زیرگروه‌های مسئول':'افزودن مسئول جدید'}</h3>
    ${existing?'':`<div class="row"><div class="f"><label>نام نمایشی</label><input id="spN"></div></div>
-   <div class="row"><div class="f"><label>ایمیل ورود</label><input id="spE" type="email"></div></div>
+   <div class="row"><div class="f"><label>نام‌کاربری ورود (فقط حروف انگلیسی/عدد، بدون فاصله)</label><input id="spU" placeholder="مثلاً sara_ahmadi"></div></div>
    <div class="row"><div class="f"><label>رمز عبور موقت</label><input id="spP" type="text" placeholder="حداقل ۶ کاراکتر"></div></div>
-   <p class="mu">این ایمیل و رمز را به مسئول بدهید تا در سامانه اصلی وارد شود.</p>`}
+   <p class="mu">این نام‌کاربری و رمز را به مسئول بدهید تا در سامانه اصلی وارد شود (نیازی به ایمیل ندارد).</p>`}
    <div class="row"><div class="f"><label>زیرگروه(های) تحت مسئولیت</label>
    ${GROUPS.map(g=>'<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tx)"><input type="checkbox" value="'+g.id+'" class="grpChk" '+(curGroups.has(g.id)?'checked':'')+'> '+esc(g.name)+'</label>').join('')||'<span class="mu">ابتدا یک زیرگروه بسازید.</span>'}
    </div></div>
@@ -170,18 +196,19 @@ function staffModal(staffId){
     const okBtn=bg.querySelector('#ok');okBtn.disabled=true;
     let staffUid=staffId;
     if(!existing){
-      const name=$('spN')?bg.querySelector('#spN').value.trim():'';
-      const email=bg.querySelector('#spE').value.trim();
+      const name=bg.querySelector('#spN').value.trim();
+      const username=bg.querySelector('#spU').value.trim();
       const pass=bg.querySelector('#spP').value;
-      if(!name||!email||pass.length<6){toast('نام، ایمیل و رمز حداقل ۶ کاراکتری را کامل وارد کنید');okBtn.disabled=false;return;}
+      if(!name||!validUsername(username)||pass.length<6){toast('نام، نام‌کاربری معتبر (۳ تا ۳۰ حرف/عدد انگلیسی) و رمز حداقل ۶ کاراکتری را کامل وارد کنید');okBtn.disabled=false;return;}
+      const email=usernameToEmail(username);
       // ساخت کاربر با یک نشست موقت و جداگانه، تا نشست ورود مدیر کل دست‌نخورده بماند
       const tempClient=window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
       const {data,error}=await tempClient.auth.signUp({email,password:pass});
-      if(error){toast('خطا در ساخت حساب: '+error.message);okBtn.disabled=false;return;}
+      if(error){toast(error.message.includes('already')?'این نام‌کاربری قبلاً استفاده شده.':'خطا در ساخت حساب: '+error.message);okBtn.disabled=false;return;}
       staffUid=data.user.id;
-      const {error:pe}=await sb.from('profiles').insert({id:staffUid,display_name:name,role:'staff',email});
+      const {error:pe}=await sb.from('profiles').insert({id:staffUid,display_name:name,role:'staff',username});
       if(pe){toast('خطا در ثبت پروفایل: '+pe.message);okBtn.disabled=false;return;}
-      STAFF.push({id:staffUid,display_name:name,role:'staff',email});
+      STAFF.push({id:staffUid,display_name:name,role:'staff',username});
     }
     const {error:de}=await sb.from('staff_groups').delete().eq('staff_id',staffUid);
     if(de){toast('خطا: '+de.message);okBtn.disabled=false;return;}
