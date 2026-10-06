@@ -1,0 +1,218 @@
+<!-- پنل مدیریت کلی سامانه عملکرد تحصیلی — دسترسی فقط برای مدیر کل -->
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>پنل مدیریت — سامانه عملکرد تحصیلی</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--bd:#e3e7ee;--tx:#1c2430;--mu:#6b7684;--br:#2f5fd8;--brs:#e8eefd;--ok:#1f9d5a;--oks:#e6f7ee;--bad:#d6473f;--bads:#fbe9e8;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Tahoma,"Segoe UI",Vazirmatn,sans-serif;font-size:14px}
+header{background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:10px;padding:10px 14px;flex-wrap:wrap}
+header b{color:var(--br)}
+main{max-width:980px;margin:0 auto;padding:16px 12px 60px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:14px}
+h3{margin:0 0 10px;font-size:15px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:7px 8px;border-bottom:1px solid var(--bd);text-align:right}
+th{color:var(--mu);font-size:12px}
+input,select{font:inherit;padding:7px 9px;border:1px solid var(--bd);border-radius:8px;background:#fff;color:var(--tx);width:100%}
+label{display:block;font-size:12px;color:var(--mu);margin-bottom:3px}
+.f{flex:1;min-width:160px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+.btn{padding:8px 14px;border-radius:9px;border:1px solid var(--bd);background:#fff;cursor:pointer;font:inherit}
+.btn.p{background:var(--br);color:#fff;border-color:var(--br)}
+.btn.d{background:var(--bads);color:var(--bad);border-color:transparent}
+.btn.small{padding:4px 9px;font-size:12px;border-radius:7px}
+.mu{color:var(--mu);font-size:12px}
+.mbg{position:fixed;inset:0;background:rgba(10,14,24,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:12px}
+.modal{background:#fff;border-radius:12px;padding:18px;width:100%;max-width:420px}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1c2430;color:#fff;padding:9px 18px;border-radius:9px;z-index:99;display:none}
+.chip{display:inline-block;background:var(--brs);color:var(--br);border-radius:99px;padding:2px 10px;font-size:12px;margin:2px}
+</style>
+</head>
+<body>
+<header>
+  <b>⚙️ پنل مدیریت کلی</b>
+  <span class="mu">دسترسی فقط برای مدیر سامانه</span>
+  <span style="flex:1"></span>
+  <a href="index.html" class="btn small">رفتن به سامانه اصلی</a>
+  <span class="mu" id="whoami"></span>
+  <button class="btn small" id="logoutBtn" style="display:none">خروج</button>
+</header>
+<main><div id="view"></div></main>
+<div id="toast"></div>
+
+<div id="loginGate" class="mbg">
+  <div class="modal" style="max-width:360px">
+    <h3 style="text-align:center">🔐 ورود مدیر کل</h3>
+    <div id="loginErr" class="mu" style="color:var(--bad);display:none;margin-bottom:8px"></div>
+    <div class="row"><div class="f"><label>ایمیل</label><input id="loE" type="email" autocomplete="username"></div></div>
+    <div class="row"><div class="f"><label>رمز عبور</label><input id="loP" type="password" autocomplete="current-password"></div></div>
+    <button class="btn p" id="loBtn" style="width:100%">ورود</button>
+  </div>
+</div>
+<div id="loadingGate" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:150;align-items:center;justify-content:center;font-size:16px;color:var(--mu)">در حال بارگذاری…</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const SUPA_URL='https://kskipnhpcxrcgpghurct.supabase.co';
+const SUPA_KEY='sb_publishable_oYXKVBx7Zd04UuKWcEmpbQ_s70EI1iJ';
+const sb=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+const $=id=>document.getElementById(id);
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.display='none',2600);}
+function uid(){return (crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now().toString(36)+Math.random().toString(36).slice(2,10));}
+
+let GROUPS=[],STAFF=[],ASSIGN=[]; // ASSIGN: ردیف‌های staff_groups
+
+function showLogin(err){
+  $('loadingGate').style.display='none';
+  $('loginGate').style.display='flex';
+  const el=$('loginErr');
+  if(err){el.style.display='block';el.textContent=err;}else{el.style.display='none';}
+}
+
+async function afterLogin(session){
+  const {data:prof,error}=await sb.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
+  if(error||!prof||prof.role!=='admin'){
+    await sb.auth.signOut();
+    showLogin(prof?'این حساب دسترسی مدیر ندارد.':'این حساب در سامانه تعریف نشده.');
+    return;
+  }
+  $('whoami').textContent='👤 '+prof.display_name;
+  $('logoutBtn').style.display='';
+  $('loadingGate').style.display='flex';
+  try{ await loadAll(); }
+  catch(e){ console.error(e); showLogin('خطا در بارگذاری اطلاعات از سرور.'); return; }
+  $('loadingGate').style.display='none';
+  $('loginGate').style.display='none';
+  render();
+}
+
+async function loadAll(){
+  const [gq,pq,aq]=await Promise.all([
+    sb.from('groups').select('*').order('name'),
+    sb.from('profiles').select('*').order('display_name'),
+    sb.from('staff_groups').select('*')
+  ]);
+  for(const r of [gq,pq,aq]) if(r.error) throw r.error;
+  GROUPS=gq.data||[];
+  STAFF=(pq.data||[]).filter(p=>p.role!=='admin');
+  ASSIGN=aq.data||[];
+}
+function groupsOf(staffId){return ASSIGN.filter(a=>a.staff_id===staffId).map(a=>GROUPS.find(g=>g.id===a.group_id)).filter(Boolean);}
+
+function render(){
+  $('view').innerHTML=`
+  <div class="card"><h3>زیرگروه‌ها (برای تقسیم دانش‌آموزان بین مسئولین)</h3>
+   <div class="row"><div class="f"><label>نام زیرگروه جدید</label><input id="ngName" placeholder="مثلاً گروه الف"></div><button class="btn p" id="ngAdd">+ افزودن</button></div>
+   <table><thead><tr><th>نام</th><th></th></tr></thead><tbody>
+   ${GROUPS.map(g=>'<tr><td>'+esc(g.name)+'</td><td><button class="btn d small" data-del="'+g.id+'">حذف</button></td></tr>').join('')||'<tr><td class="mu">هنوز زیرگروهی تعریف نشده.</td></tr>'}
+   </tbody></table>
+  </div>
+
+  <div class="card"><h3>مسئولین (کاربرانی که فقط به زیرگروه خودشان دسترسی دارند)</h3>
+   <button class="btn p" id="addStaffBtn">+ افزودن مسئول جدید</button>
+   <table style="margin-top:10px"><thead><tr><th>نام</th><th>ایمیل ورود</th><th>زیرگروه‌های تحت مسئولیت</th><th></th></tr></thead><tbody>
+   ${STAFF.map(p=>'<tr data-id="'+p.id+'"><td>'+esc(p.display_name)+'</td><td class="mu">'+esc(p.email||'—')+'</td><td>'+(groupsOf(p.id).map(g=>'<span class="chip">'+esc(g.name)+'</span>').join('')||'<span class="mu">بدون زیرگروه</span>')+'</td><td><button class="btn small" data-edit="'+p.id+'">ویرایش زیرگروه‌ها</button></td></tr>').join('')||'<tr><td colspan="4" class="mu">هنوز مسئولی اضافه نشده.</td></tr>'}
+   </tbody></table>
+   <p class="mu" style="margin-top:8px">برای غیرفعال‌کردن کامل ورود یک مسئول (نه فقط گرفتن دسترسی)، باید در پنل Supabase، بخش Authentication → Users، آن حساب را حذف یا غیرفعال کنید.</p>
+  </div>
+
+  <div class="card"><h3>دانش‌آموزان و زیرگروه‌ها</h3>
+   <p class="mu">اختصاص هر دانش‌آموز به یک زیرگروه از تب «مدیریت» در سامانه اصلی، داخل فرم «ویرایش دانش‌آموز» انجام می‌شود.</p>
+   <a href="index.html" class="btn">رفتن به مدیریت دانش‌آموزان</a>
+  </div>
+  <div class="card"><h3>تنظیمات کلی (وزن شاخص‌ها، آستانه‌ها، پیام‌های کارنامه)</h3>
+   <p class="mu">این موارد از تب «مدیریت» در سامانه اصلی، بخش «⚙️ تنظیمات» قابل تغییر است (چون به داده‌های دانش‌آموزان نیاز دارد).</p>
+   <a href="index.html" class="btn">رفتن به تنظیمات</a>
+  </div>`;
+
+  $('ngAdd').onclick=async()=>{
+    const name=$('ngName').value.trim();
+    if(!name){toast('نام زیرگروه را وارد کنید');return;}
+    const row={id:uid(),name};
+    const {error}=await sb.from('groups').insert(row);
+    if(error){toast('خطا: '+error.message);return;}
+    GROUPS.push(row);$('ngName').value='';render();toast('زیرگروه اضافه شد ✓');
+  };
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
+    const id=b.dataset.del;
+    if(!confirm('این زیرگروه حذف شود؟ دانش‌آموزان آن بدون زیرگروه می‌مانند.'))return;
+    const {error}=await sb.from('groups').delete().eq('id',id);
+    if(error){toast('خطا: '+error.message);return;}
+    GROUPS=GROUPS.filter(g=>g.id!==id);ASSIGN=ASSIGN.filter(a=>a.group_id!==id);render();toast('حذف شد.');
+  });
+  $('addStaffBtn').onclick=()=>staffModal();
+  document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>staffModal(b.dataset.edit));
+}
+
+function staffModal(staffId){
+  const existing=staffId?STAFF.find(p=>p.id===staffId):null;
+  const curGroups=new Set(existing?groupsOf(staffId).map(g=>g.id):[]);
+  const bg=document.createElement('div');bg.className='mbg';
+  bg.innerHTML=`<div class="modal">
+   <h3>${existing?'ویرایش زیرگروه‌های مسئول':'افزودن مسئول جدید'}</h3>
+   ${existing?'':`<div class="row"><div class="f"><label>نام نمایشی</label><input id="spN"></div></div>
+   <div class="row"><div class="f"><label>ایمیل ورود</label><input id="spE" type="email"></div></div>
+   <div class="row"><div class="f"><label>رمز عبور موقت</label><input id="spP" type="text" placeholder="حداقل ۶ کاراکتر"></div></div>
+   <p class="mu">این ایمیل و رمز را به مسئول بدهید تا در سامانه اصلی وارد شود.</p>`}
+   <div class="row"><div class="f"><label>زیرگروه(های) تحت مسئولیت</label>
+   ${GROUPS.map(g=>'<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tx)"><input type="checkbox" value="'+g.id+'" class="grpChk" '+(curGroups.has(g.id)?'checked':'')+'> '+esc(g.name)+'</label>').join('')||'<span class="mu">ابتدا یک زیرگروه بسازید.</span>'}
+   </div></div>
+   <div style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="ok">ذخیره</button><button class="btn" id="no">انصراف</button></div>
+  </div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#no').onclick=()=>bg.remove();
+  bg.querySelector('#ok').onclick=async()=>{
+    const selectedGroups=[...bg.querySelectorAll('.grpChk:checked')].map(c=>c.value);
+    const okBtn=bg.querySelector('#ok');okBtn.disabled=true;
+    let staffUid=staffId;
+    if(!existing){
+      const name=$('spN')?bg.querySelector('#spN').value.trim():'';
+      const email=bg.querySelector('#spE').value.trim();
+      const pass=bg.querySelector('#spP').value;
+      if(!name||!email||pass.length<6){toast('نام، ایمیل و رمز حداقل ۶ کاراکتری را کامل وارد کنید');okBtn.disabled=false;return;}
+      // ساخت کاربر با یک نشست موقت و جداگانه، تا نشست ورود مدیر کل دست‌نخورده بماند
+      const tempClient=window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+      const {data,error}=await tempClient.auth.signUp({email,password:pass});
+      if(error){toast('خطا در ساخت حساب: '+error.message);okBtn.disabled=false;return;}
+      staffUid=data.user.id;
+      const {error:pe}=await sb.from('profiles').insert({id:staffUid,display_name:name,role:'staff',email});
+      if(pe){toast('خطا در ثبت پروفایل: '+pe.message);okBtn.disabled=false;return;}
+      STAFF.push({id:staffUid,display_name:name,role:'staff',email});
+    }
+    const {error:de}=await sb.from('staff_groups').delete().eq('staff_id',staffUid);
+    if(de){toast('خطا: '+de.message);okBtn.disabled=false;return;}
+    ASSIGN=ASSIGN.filter(a=>a.staff_id!==staffUid);
+    if(selectedGroups.length){
+      const rows=selectedGroups.map(gid=>({staff_id:staffUid,group_id:gid}));
+      const {error:ie}=await sb.from('staff_groups').insert(rows);
+      if(ie){toast('خطا: '+ie.message);okBtn.disabled=false;return;}
+      ASSIGN.push(...rows);
+    }
+    bg.remove();render();toast('ذخیره شد ✓');
+  };
+}
+
+async function initAuth(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){showLogin();return;}
+  await afterLogin(session);
+}
+$('loBtn').onclick=async()=>{
+  const email=$('loE').value.trim(),pass=$('loP').value;
+  if(!email||!pass){showLogin('ایمیل و رمز را وارد کنید');return;}
+  $('loBtn').disabled=true;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  $('loBtn').disabled=false;
+  if(error){showLogin('ورود ناموفق: ایمیل یا رمز اشتباه است.');return;}
+  $('loginGate').style.display='none';$('loadingGate').style.display='flex';
+  await afterLogin(data.session);
+};
+$('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload();};
+initAuth();
+</script>
+</body>
+</html>

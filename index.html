@@ -62,14 +62,35 @@ body:has(#cardOv) main{display:none!important}
   <button class="tab" data-t="follow">پیگیری</button>
   <button class="tab" data-t="manage">مدیریت</button>
   <span style="flex:1"></span>
+  <span class="mu" id="whoami"></span>
+  <button class="btn small" id="logoutBtn" style="display:none">خروج</button>
   <span class="mu" id="saved"></span>
 </header>
 <main><div id="banner"></div><div id="view"></div></main>
 <div id="toast"></div>
 
+<div id="loginGate" class="mbg" style="display:none;z-index:200">
+  <div class="modal" style="max-width:360px">
+    <h3 style="text-align:center">🎓 ورود به سامانه</h3>
+    <div id="loginErr" class="mu" style="color:var(--bad);display:none;margin-bottom:8px"></div>
+    <div class="row"><div class="f"><label>ایمیل</label><input id="loE" type="email" autocomplete="username"></div></div>
+    <div class="row"><div class="f"><label>رمز عبور</label><input id="loP" type="password" autocomplete="current-password"></div></div>
+    <button class="btn p" id="loBtn" style="width:100%">ورود</button>
+    <p class="mu" style="margin-top:10px;text-align:center">این سامانه کاملاً ابری است و بدون اتصال اینترنت و ورود معتبر قابل استفاده نیست.</p>
+    <p class="mu" style="text-align:center"><a href="admin.html">ورود مدیر کل / پنل مدیریت</a></p>
+  </div>
+</div>
+<div id="loadingGate" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:150;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--mu)">در حال بارگذاری اطلاعات…</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
+/* ================= اتصال به Supabase (پایگاه‌داده‌ی ابری؛ بدون اینترنت و ورود معتبر چیزی کار نمی‌کند) ================= */
+const SUPA_URL='https://kskipnhpcxrcgpghurct.supabase.co';
+const SUPA_KEY='sb_publishable_oYXKVBx7Zd04UuKWcEmpbQ_s70EI1iJ';
+const sb=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+let PROFILE=null,SESSION=null;
+
 /* ================= CORE (بدون وابستگی به صفحه) ================= */
-const LS='schoolSys_v1', LSB=['schoolSys_bak1','schoolSys_bak2','schoolSys_bak3'];
 const CLASSES=["ریاضی 1","ریاضی 2","انسانی"];
 const COMP={morning:"آزمون صبحگاهی",weekly:"آزمون تشریحی",study:"ساعت مطالعه",logging:"ثبت مطالعه",quality:"کیفیت مطالعه",classroom:"عملکرد کلاسی"};
 const CKEY={morning:'morningScore',weekly:'weeklyScore',study:'studyScore',logging:'loggingScore',quality:'qualityScore',classroom:'classroomScore'};
@@ -84,34 +105,85 @@ const DEF_CFG={weights:{morning:15,weekly:20,study:20,logging:10,quality:15,clas
   }};
 let S=null, CACHE={}, MONTHS=null;
 
-function newState(){return {v:1,students:[],days:{},exams:[],actions:[],cfg:JSON.parse(JSON.stringify(DEF_CFG)),lastBackup:null,lastSnap:null};}
-function loadState(){
-  try{const r=localStorage.getItem(LS); if(r){S=JSON.parse(r);}}catch(e){}
-  if(!S){ // تلاش برای بازیابی از نسخه‌های خودکار
-    for(const k of LSB){try{const r=localStorage.getItem(k); if(r){S=JSON.parse(r);break;}}catch(e){}}
-  }
-  if(!S)S=newState();
-  S.cfg=Object.assign({},DEF_CFG,S.cfg||{});
-}
-function saveState(){
+function newState(){return {v:1,students:[],groups:[],days:{},exams:[],actions:[],cfg:JSON.parse(JSON.stringify(DEF_CFG))};}
+function markSaved(ok){
   CACHE={};MONTHS=null;
-  try{
-    localStorage.setItem(LS,JSON.stringify(S));
-    const el=document.getElementById('saved'); if(el)el.textContent='✓ ذخیره شد '+new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'});
-    return true;
-  }catch(e){alert('خطا در ذخیره‌سازی! فوراً از منوی «مدیریت» نسخه پشتیبان بگیرید.');return false;}
+  const el=document.getElementById('saved');
+  if(el)el.textContent=ok?('✓ ذخیره شد '+new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})):'⚠️ خطا در ذخیره';
 }
-function autoSnapshot(){ // یک نسخه خودکار در روز، سه نسخه چرخشی
-  const today=new Date().toISOString().slice(0,10);
-  if(S.lastSnap===today||!S.students.length)return;
-  try{
-    const cur=localStorage.getItem(LS);
-    localStorage.setItem(LSB[2],localStorage.getItem(LSB[1])||cur);
-    localStorage.setItem(LSB[1],localStorage.getItem(LSB[0])||cur);
-    localStorage.setItem(LSB[0],cur);
-    S.lastSnap=today; localStorage.setItem(LS,JSON.stringify(S));
-  }catch(e){}
+function netErr(e){console.error(e);toast('⚠️ خطا در ارتباط با سرور — تغییرات ذخیره نشد. اتصال اینترنت را بررسی کنید.');markSaved(false);}
+
+/* بارگذاری کامل داده‌ها از Supabase پس از ورود موفق؛ این سامانه هیچ داده‌ی واقعی را در localStorage نگه نمی‌دارد
+   و بدون نشست کاربری معتبر و اتصال اینترنت هیچ داده‌ای نمایش داده نمی‌شود. */
+async function loadFromSupabase(){
+  S=newState();
+  const [gq,sq,dq,eq,esq,aq,cq]=await Promise.all([
+    sb.from('groups').select('*'),
+    sb.from('students').select('*'),
+    sb.from('days').select('*'),
+    sb.from('exams').select('*'),
+    sb.from('exam_scores').select('*'),
+    sb.from('actions').select('*'),
+    sb.from('cfg').select('*').eq('id',1).maybeSingle()
+  ]);
+  for(const r of [gq,sq,dq,eq,esq,aq,cq]) if(r.error) throw r.error;
+  S.groups=(gq.data||[]).map(g=>({id:g.id,name:g.name}));
+  S.students=(sq.data||[]).map(s=>({id:s.id,name:s.name,cls:s.cls,active:s.active,goal:s.goal==null?'':s.goal,group_id:s.group_id}));
+  S.students.sort((a,b)=>a.name.localeCompare(b.name,'fa'));
+  (dq.data||[]).forEach(r=>{
+    const date=r.date,sid=r.student_id,rec={};
+    if(r.qa)rec.qa=1; else if(r.q!=null)rec.q=r.q;
+    if(r.h!=null)rec.h=r.h;
+    if(r.s!=null)rec.s=r.s;
+    if(r.lg!=null)rec.lg=r.lg?1:0;
+    if(r.hw!=null)rec.hw=r.hw;
+    if(r.ex!=null)rec.ex=r.ex;
+    if(Object.keys(rec).length){S.days[date]=S.days[date]||{};S.days[date][sid]=rec;}
+  });
+  const byExam={};
+  (esq.data||[]).forEach(r=>{(byExam[r.exam_id]=byExam[r.exam_id]||{})[r.student_id]=r.score;});
+  S.exams=(eq.data||[]).map(e=>({id:e.id,date:e.date,title:e.title,type:e.type,subject:e.subject,total:e.total,scores:byExam[e.id]||{}}));
+  S.actions=(aq.data||[]).map(a=>({id:a.id,sid:a.student_id,date:a.date,problem:a.problem,action:a.action,owner:a.owner,status:a.status,result:a.result}));
+  S.cfg=Object.assign({},DEF_CFG,(cq.data&&cq.data.data)||{});
+  CACHE={};MONTHS=null;
 }
+
+/* ---- عملیات ذخیره‌سازی هدفمند: فقط همان رکورد تغییر‌یافته به Supabase فرستاده می‌شود ---- */
+async function remoteSaveDay(date,sid,rec){
+  rec=rec||{};
+  if(!Object.keys(rec).length){
+    const {error}=await sb.from('days').delete().eq('student_id',sid).eq('date',date);
+    if(error)throw error; return;
+  }
+  const row={student_id:sid,date,q:rec.q!=null?rec.q:null,qa:!!rec.qa,h:rec.h!=null?rec.h:null,s:rec.s!=null?rec.s:null,lg:rec.lg==null?null:!!rec.lg,hw:rec.hw!=null?rec.hw:null,ex:rec.ex!=null?rec.ex:null};
+  const {error}=await sb.from('days').upsert(row,{onConflict:'student_id,date'});
+  if(error)throw error;
+}
+async function remoteSaveExam(obj){
+  const {error}=await sb.from('exams').upsert({id:obj.id,date:obj.date,title:obj.title,type:obj.type,subject:obj.subject,total:obj.total});
+  if(error)throw error;
+  const {error:de}=await sb.from('exam_scores').delete().eq('exam_id',obj.id);
+  if(de)throw de;
+  const rows=Object.entries(obj.scores||{}).map(([sid,score])=>({exam_id:obj.id,student_id:sid,score}));
+  if(rows.length){const {error:ie}=await sb.from('exam_scores').insert(rows); if(ie)throw ie;}
+}
+async function remoteDeleteExam(id){ const {error}=await sb.from('exams').delete().eq('id',id); if(error)throw error; }
+async function remoteSaveAction(obj){
+  const {error}=await sb.from('actions').upsert({id:obj.id,student_id:obj.sid,date:obj.date,problem:obj.problem,action:obj.action,owner:obj.owner,status:obj.status,result:obj.result});
+  if(error)throw error;
+}
+async function remoteDeleteAction(id){ const {error}=await sb.from('actions').delete().eq('id',id); if(error)throw error; }
+async function remoteInsertStudent(s){
+  const {error}=await sb.from('students').insert({id:s.id,name:s.name,cls:s.cls,group_id:s.group_id||null,active:true,goal:s.goal===''?null:s.goal});
+  if(error)throw error;
+}
+async function remoteUpdateStudent(s,withGroup){
+  const payload={name:s.name,cls:s.cls,goal:s.goal===''?null:s.goal,active:s.active};
+  if(withGroup)payload.group_id=s.group_id||null;
+  const {error}=await sb.from('students').update(payload).eq('id',s.id);
+  if(error)throw error;
+}
+async function remoteSaveCfg(cfg){ const {error}=await sb.from('cfg').update({data:cfg}).eq('id',1); if(error)throw error; }
 
 const fa=new Intl.DateTimeFormat('en-u-ca-persian-nu-latn',{year:'numeric',month:'numeric',day:'numeric',timeZone:'UTC'});
 const jmemo={};
@@ -279,10 +351,11 @@ function reasons(sid,m){
   if(c.morningScore!=null&&p.morningScore!=null&&p.morningScore-c.morningScore>=cf.drop)out.push('کاهش عملکرد آزمون صبحگاهی');
   return out;
 }
-function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
-function delOneRecord(date,sid){
+function uid(){return (crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now().toString(36)+Math.random().toString(36).slice(2,10));}
+async function delOneRecord(date,sid){
+  try{ await remoteSaveDay(date,sid,{}); }catch(e){ netErr(e); return; }
   if(S.days[date]){ delete S.days[date][sid]; if(!Object.keys(S.days[date]).length) delete S.days[date]; }
-  saveState();
+  markSaved(true);
 }
 
 /* ---- وارد کردن نمرات آزمون صبحگاهی از اکسل (چسباندن یا فایل CSV) ---- */
@@ -383,7 +456,7 @@ function importMorningModal(date,cls){
       <div class="btn-row" style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="impApply">ثبت نمرات</button></div>
     `;
     box.querySelectorAll('.impSel').forEach(sel=>sel.onchange=e=>{rows[+e.target.dataset.i].sid=e.target.value||null;});
-    box.querySelector('#impApply').onclick=()=>{
+    box.querySelector('#impApply').onclick=async()=>{
       const d=isoOf('impD');
       if(!d){toast('تاریخ نامعتبر است');return;}
       const usable=rows.filter(r=>r.sid&&!r.invalid);
@@ -397,28 +470,15 @@ function importMorningModal(date,cls){
         if(r.absent)next.qa=1;else next.q=r.value;
         day[r.sid]=next;
       });
+      const btn=box.querySelector('#impApply');btn.disabled=true;
+      try{ await Promise.all([...seen].map(sid=>remoteSaveDay(d,sid,day[sid]))); }
+      catch(e){ netErr(e); btn.disabled=false; return; }
       if(Object.keys(day).length)S.days[d]=day;else delete S.days[d];
-      saveState();bg.remove();
+      markSaved(true);bg.remove();
       toast(fa2(usable.length)+' نمره ثبت شد'+(dup?' (برخی نام‌ها تکراری بودند؛ آخرین مقدار اعمال شد)':'')+' ✓');
       entDaily(d,cls);
     };
   }
-}
-
-/* ادغام غیرمخرب یک فایل پشتیبان با داده فعلی — برای تقسیم کار بین چند نفر/دستگاه.
-   هیچ رکورد موجودی حذف نمی‌شود؛ فقط رکوردهای جدید اضافه و فیلدهای مشترک با مقدار جدید به‌روزرسانی می‌شوند. */
-function mergeState(imp){
-  const out=S;
-  (imp.students||[]).forEach(s=>{const i=out.students.findIndex(x=>x.id===s.id);if(i>=0)out.students[i]=Object.assign({},out.students[i],s);else out.students.push(s);});
-  Object.entries(imp.days||{}).forEach(([d,recs])=>{
-    out.days[d]=out.days[d]||{};
-    Object.entries(recs).forEach(([sid,rec])=>{out.days[d][sid]=Object.assign({},out.days[d][sid]||{},rec);});
-  });
-  (imp.exams||[]).forEach(e=>{const i=out.exams.findIndex(x=>x.id===e.id);
-    if(i>=0)out.exams[i]=Object.assign({},out.exams[i],e,{scores:Object.assign({},out.exams[i].scores,e.scores)});
-    else out.exams.push(e);});
-  (imp.actions||[]).forEach(a=>{const i=out.actions.findIndex(x=>x.id===a.id);if(i>=0)out.actions[i]=a;else out.actions.push(a);});
-  out.students.sort((a,b)=>a.name.localeCompare(b.name,'fa'));
 }
 
 /* ================= UI ================= */
@@ -442,11 +502,7 @@ function trend(sid,m){const ms=[];for(let i=5;i>=0;i--)ms.push(addM(m,-i));retur
 function schoolAvg(m){return avg(active().map(s=>compute(s.id,m).overall).filter(v=>v!=null));}
 
 function show(t){TAB=t;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));banner();({dash:vDash,entry:vEntry,follow:vFollow,manage:vManage})[t]();window.scrollTo(0,0);}
-function banner(){
-  let h='';const days=S.lastBackup?Math.floor((Date.now()-S.lastBackup)/86400000):null;
-  if(S.students.length&&(days==null||days>=7))h='<div class="warn"><span>⚠️ '+(days==null?'هنوز هیچ نسخه پشتیبانی دانلود نکرده‌اید.':'آخرین نسخه پشتیبان '+days+' روز پیش بوده است.')+' برای امنیت داده‌ها یک نسخه ذخیره کنید.</span><button class="btn p" onclick="doBackup()">دانلود نسخه پشتیبان</button></div>';
-  $('banner').innerHTML=h;
-}
+function banner(){ $('banner').innerHTML=''; }
 
 /* ---- داشبورد و گزارش ---- */
 function vDash(){
@@ -575,18 +631,19 @@ function entDaily(date,cls){
    </tbody></table></div></div>`;
   wireJalali('dd',iso=>entDaily(iso,$('dcl').value));
   $('dcl').onchange=e=>entDaily(isoOf('dd'),e.target.value);
-  $('clrDay').onclick=()=>{
+  $('clrDay').onclick=async()=>{
     const ids=st.map(s=>s.id).filter(id=>day[id]);
     if(!ids.length){toast('برای این روز (در فیلتر فعلی) داده‌ای ثبت نشده است.');return;}
     if(!confirm('داده‌ی '+ids.length+' دانش‌آموز در تاریخ '+jdate(date)+' حذف شود؟ این کار قابل بازگشت نیست.'))return;
+    try{ await Promise.all(ids.map(id=>remoteSaveDay(date,id,{}))); }catch(e){ netErr(e); return; }
     ids.forEach(id=>delete day[id]);
     if(Object.keys(day).length)S.days[date]=day;else delete S.days[date];
-    saveState();toast('داده‌های این روز حذف شد.');entDaily(date,cls);
+    markSaved(true);toast('داده‌های این روز حذف شد.');entDaily(date,cls);
   };
-  document.querySelectorAll('#ent .rowdel').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#ent .rowdel').forEach(b=>b.onclick=async()=>{
     const sid=b.dataset.id,nm=stById(sid).name;
     if(!confirm('رکورد «'+nm+'» در تاریخ '+jdate(date)+' حذف شود؟'))return;
-    delOneRecord(date,sid);toast('حذف شد.');entDaily(date,cls);
+    await delOneRecord(date,sid);toast('حذف شد.');entDaily(date,cls);
   });
   $('impXl').onclick=()=>importMorningModal(date,cls);
   $('dq').oninput=e=>{const q=e.target.value.trim();document.querySelectorAll('#ent tbody tr[data-nm]').forEach(tr=>{tr.style.display=!q||tr.dataset.nm.includes(q)?'':'none';});};
@@ -620,9 +677,9 @@ function entDaily(date,cls){
     const firstQ=document.querySelector('#ent tbody tr[data-id]:not([style*="display: none"]) .q');
     if(firstQ) firstQ.focus();
   }
-  $('sv').onclick=()=>{
+  $('sv').onclick=async()=>{
     const d=isoOf('dd');if(!d){toast('تاریخ نامعتبر است');return;}
-    const rec={...(S.days[d]||{})},errs=[];
+    const before={...(S.days[d]||{})},rec={...before},errs=[],changed=[];
     document.querySelectorAll('#ent tbody tr[data-id]').forEach(tr=>{
       const id=tr.dataset.id,nm=stById(id).name,g=c=>tr.querySelector(c).value,r={};
       if(tr.querySelector('.qa').checked)r.qa=1;
@@ -632,11 +689,17 @@ function entDaily(date,cls){
       if(g('.lg')!=='')r.lg=+g('.lg');
       if(g('.hw')!=='')r.hw=+g('.hw');
       if(g('.ex')!==''){const v=+g('.ex');if(isNaN(v)||v<0||!Number.isInteger(v)){errs.push(nm+': تعداد اخراج نامعتبر');return;}r.ex=v;}
+      const had=JSON.stringify(before[id]||{}),now=JSON.stringify(r);
+      if(had!==now)changed.push([id,r]);
       if(Object.keys(r).length)rec[id]=r;else delete rec[id];
     });
     if(errs.length){alert('خطا در ورود اطلاعات:\n'+errs.slice(0,8).join('\n'));return;}
+    if(!changed.length){toast('تغییری برای ذخیره نبود.');return;}
+    $('sv').disabled=true;
+    try{ await Promise.all(changed.map(([id,r])=>remoteSaveDay(d,id,r))); }
+    catch(e){ netErr(e); $('sv').disabled=false; return; }
     if(Object.keys(rec).length)S.days[d]=rec;else delete S.days[d];
-    if(saveState())toast('ذخیره شد ✓');
+    markSaved(true);toast('ذخیره شد ✓');$('sv').disabled=false;
   };
 }
 function entExam(){
@@ -664,7 +727,7 @@ function entExam(){
     });
   });
   { const firstSc=document.querySelector('#ent tbody tr[data-id] .sc'); if(firstSc) firstSc.focus(); }
-  $('xsv').onclick=()=>{
+  $('xsv').onclick=async()=>{
     const d=isoOf('xd'),t=$('xt').value.trim(),tot=+$('xm').value,sc={},errs=[];
     if(!d||!t){toast('تاریخ و عنوان لازم است');return;}
     if(!(tot>0)){toast('نمره کل نامعتبر است');return;}
@@ -672,11 +735,17 @@ function entExam(){
       if(isNaN(n)||n<0||n>tot)errs.push(stById(tr.dataset.id).name+': نمره باید بین ۰ و '+tot+' باشد');else sc[tr.dataset.id]=n;});
     if(errs.length){alert(errs.slice(0,8).join('\n'));return;}
     const obj={id:e?e.id:uid(),date:d,title:t,type:$('xy').value,subject:$('xs').value.trim(),total:tot,scores:sc};
+    $('xsv').disabled=true;
+    try{ await remoteSaveExam(obj); }catch(err){ netErr(err); $('xsv').disabled=false; return; }
     if(e)S.exams[S.exams.indexOf(e)]=obj;else S.exams.push(obj);
-    EDITEXAM=null;if(saveState()){toast('آزمون ذخیره شد ✓');entExam();}
+    EDITEXAM=null;markSaved(true);toast('آزمون ذخیره شد ✓');entExam();
   };
 }
-function delExam(id){if(!confirm('این آزمون حذف شود؟'))return;S.exams=S.exams.filter(x=>x.id!==id);saveState();entExam();}
+async function delExam(id){
+  if(!confirm('این آزمون حذف شود؟'))return;
+  try{ await remoteDeleteExam(id); }catch(e){ netErr(e); return; }
+  S.exams=S.exams.filter(x=>x.id!==id);markSaved(true);entExam();
+}
 
 /* ---- پیگیری ---- */
 function fieldSummary(iso,sid){
@@ -733,10 +802,10 @@ function renderOvsList(){
   el.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{
     const d=b.dataset.go,s2=stById(sid);SUBENTRY='daily';vEntry();entDaily(d,s2?s2.cls:'');
   });
-  el.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+  el.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
     const d=b.dataset.del;
     if(!confirm('رکورد این دانش‌آموز در '+jdate(d)+' حذف شود؟'))return;
-    delOneRecord(d,sid);toast('حذف شد.');renderOvsList();
+    await delOneRecord(d,sid);toast('حذف شد.');renderOvsList();
   });
 }
 function vFollow(){
@@ -762,32 +831,37 @@ function actModal(sid,aid){
   <div style="display:flex;gap:8px"><button class="btn p" id="ok">ذخیره</button><button class="btn" id="no">انصراف</button>${aid?'<button class="btn d" id="dl">حذف</button>':''}</div></div>`;
   document.body.appendChild(bg);bg.querySelector('#no').onclick=()=>bg.remove();
   wireJalali('ad');
-  if(aid)bg.querySelector('#dl').onclick=()=>{if(confirm('حذف شود؟')){S.actions=S.actions.filter(x=>x.id!==aid);saveState();bg.remove();vFollow();}};
-  bg.querySelector('#ok').onclick=()=>{
+  if(aid)bg.querySelector('#dl').onclick=async()=>{
+    if(!confirm('حذف شود؟'))return;
+    try{ await remoteDeleteAction(aid); }catch(e){ netErr(e); return; }
+    S.actions=S.actions.filter(x=>x.id!==aid);markSaved(true);bg.remove();vFollow();
+  };
+  bg.querySelector('#ok').onclick=async()=>{
     const o={id:a.id||uid(),sid:$('as').value,date:isoOf('ad'),problem:$('ap').value.trim(),action:$('aa').value.trim(),owner:$('ao').value.trim(),status:$('at').value,result:$('ar').value.trim()};
     if(!o.problem){toast('مشکل را بنویسید');return;}
+    const okBtn=bg.querySelector('#ok');okBtn.disabled=true;
+    try{ await remoteSaveAction(o); }catch(e){ netErr(e); okBtn.disabled=false; return; }
     if(aid)S.actions[S.actions.findIndex(x=>x.id===aid)]=o;else S.actions.push(o);
-    saveState();bg.remove();vFollow();
+    markSaved(true);bg.remove();vFollow();
   };
 }
 
 /* ---- مدیریت ---- */
+function isAdmin(){return PROFILE&&PROFILE.role==='admin';}
 function vManage(){
-  const c=S.cfg;
+  const c=S.cfg,admin=isAdmin();
   $('view').innerHTML=`
   <div class="card"><h3>دانش‌آموزان (${active().length} فعال از ${S.students.length})</h3>
    <div class="row"><div class="f" style="max-width:240px"><input id="stq" placeholder="جستجوی نام…"></div>
-   <button class="btn p" onclick="stModal()">+ افزودن دانش‌آموز</button> <button class="btn" onclick="bulkModal()">افزودن گروهی (چسباندن فهرست)</button></div>
+   ${admin?'<button class="btn p" onclick="stModal()">+ افزودن دانش‌آموز</button> <button class="btn" onclick="bulkModal()">افزودن گروهی (چسباندن فهرست)</button>':'<span class="mu">افزودن دانش‌آموز جدید فقط توسط مدیر سامانه انجام می‌شود.</span>'}</div>
    <div class="tw" style="margin-top:10px;max-height:50vh"><table><thead><tr><th>نام</th><th>کلاس</th><th>هدف مطالعه</th><th>وضعیت</th><th></th></tr></thead><tbody id="stbody">
    ${S.students.map(s=>'<tr data-nm="'+esc(s.name)+'"><td>'+esc(s.name)+'</td><td>'+esc(s.cls)+'</td><td>'+(s.goal!=null&&s.goal!==''?s.goal+' ساعت':'<span class="mu">پیش‌فرض</span>')+'</td><td>'+(s.active===false?'غیرفعال':'فعال')+'</td><td><button class="btn" onclick="stModal(\''+s.id+'\')">ویرایش</button></td></tr>').join('')||'<tr><td colspan="5" class="mu">دانش‌آموزی نیست.</td></tr>'}</tbody></table></div></div>
-  <div class="card"><h3>🛡 پشتیبان‌گیری و همکاری چندنفره</h3>
-   <p class="mu">داده‌ها روی همین دستگاه و مرورگر ذخیره می‌شوند و بدون اینترنت کار می‌کنند. سامانه روزی یک نسخه خودکار نگه می‌دارد، اما برای امنیت کامل هفته‌ای یک بار فایل پشتیبان را دانلود و روی فلش/ایمیل نگه دارید.</p>
-   <p class="mu"><b>برای تقسیم کار بین چند نفر:</b> هر همکار روی دستگاه خودش بخشی از دانش‌آموزان را ثبت می‌کند (مثلاً با فیلتر «کلاس/رشته» در جدول ثبت روزانه)، سپس فایل پشتیبان خودش را می‌گیرد. مسئول اصلی این فایل‌ها را یکی‌یکی با گزینه «ادغام» وارد می‌کند تا هیچ داده‌ای پاک نشود.</p>
-   <button class="btn p" onclick="doBackup()">دانلود نسخه پشتیبان</button>
-   <button class="btn" onclick="$('imp').click()">📥 وارد کردن از فایل پشتیبان</button>
-   <input type="file" id="imp" accept=".json" style="display:none">
+  <div class="card"><h3>☁️ ذخیره‌سازی ابری</h3>
+   <p class="mu">تمام داده‌ها به‌صورت زنده در پایگاه‌داده‌ی ابری ذخیره می‌شوند و همه‌ی مسئولین هم‌زمان با یک منبع مشترک کار می‌کنند؛ نیازی به فایل پشتیبان یا ادغام دستی نیست.</p>
+   <button class="btn" onclick="doBackup()">⬇️ دانلود یک نسخه‌ی فقط-خواندنی (برای آرامش خاطر شما)</button>
   </div>
   <details class="card"><summary>⚙️ تنظیمات (پیش‌فرض‌ها معمولاً کافی است)</summary>
+   ${admin?`
    <h3>وزن شاخص‌ها (مجموع باید ۱۰۰ باشد)</h3><div class="grid g3">${Object.keys(COMP).map(k=>'<div><label>'+COMP[k]+'</label><input type="number" id="w_'+k+'" value="'+c.weights[k]+'"></div>').join('')}</div>
    <p class="mu">وزن‌ها فرضی‌اند و قابل تغییر. اگر داده یک شاخص وجود نداشته باشد، وزن آن به‌طور خودکار بین بقیه پخش می‌شود (نه صفر).</p>
    <h3>هدف مطالعه روزانه (ساعت)</h3><div class="grid g4"><div><label>پیش‌فرض مدرسه</label><input type="number" step="0.25" id="gd" value="${c.goal}"></div>${CLASSES.map((x,i)=>'<div><label>'+x+'</label><input type="number" step="0.25" id="gc'+i+'" value="'+(c.goalByClass[x]??'')+'" placeholder="پیش‌فرض"></div>').join('')}</div>
@@ -798,92 +872,121 @@ function vManage(){
    ${[['e','عالی'],['g','خوب'],['a','نیاز به توجه'],['f','نیازمند پیگیری'],['u','داده ناکافی']].map(([k,l])=>`<div class="row"><div class="f" style="flex:0 0 110px;align-self:center"><b>${l}</b></div>
      <div class="f"><label>عنوان کوتاه</label><input id="cmt_${k}" value="${esc(c.cardMsg[k].t)}"></div>
      <div class="f"><label>توضیح</label><input id="cms_${k}" value="${esc(c.cardMsg[k].s)}"></div></div>`).join('')}
-   <button class="btn p" style="margin-top:12px" id="svc">ذخیره تنظیمات</button></details>
-  <div class="card"><h3>راهنمای کوتاه</h3><ol class="r"><li>«مدیریت»: دانش‌آموزان را اضافه کنید.</li><li>«ثبت داده»: هر روز یک جدول برای همه دانش‌آموزان پر کنید؛ برای ورود سریع در هر ستون، عدد را بنویسید و Enter بزنید تا به سطر بعدی همان ستون بروید، سپس یک‌بار «ذخیره همه» بزنید. آزمون‌های تشریحی هم همین‌طور.</li><li>دکمه‌ی «📥 وارد کردن آزمون صبحگاهی از اکسل» در بالای جدول ثبت روزانه: دو ستون «نام» و «درصد» را در اکسل کپی کنید و در پنجره‌ی باز شده بچسبانید (یا فایل CSV اکسل را انتخاب کنید)؛ سامانه نام‌ها را با فهرست دانش‌آموزان تطبیق می‌دهد و پیش از ثبت نهایی، پیش‌نمایش و امکان اصلاح دستی نام‌های تطبیق‌نیافته را نشان می‌دهد.</li><li>«داشبورد و گزارش»: وضعیت مدرسه و گزارش ماهانه؛ روی نام هر دانش‌آموز بزنید تا گزارش فردی باز و قابل چاپ شود.</li><li>«پیگیری»: فهرست خودکار دانش‌آموزان نیازمند توجه و ثبت اقدامات.</li><li>زیرتب «🔍 نمای ثبت‌ها» در «ثبت داده»: یک نمای کلی از روزهای ثبت‌شده‌ی هر دانش‌آموز در هر ماه، و جستجوی کامل تاریخچه‌ی یک دانش‌آموز برای پیدا کردن داده‌ای که اشتباهی در تاریخ نادرست ثبت شده.</li><li>برای حذف داده‌ی یک روز یا یک رکورد اشتباه، از دکمه‌های 🗑 در جدول ثبت روزانه یا در «نمای ثبت‌ها» استفاده کنید.</li><li>همیشه فایل را از همان محل باز کنید و هفته‌ای یک بار پشتیبان بگیرید.</li></ol>
-  <p class="mu" style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px">طراحی و ساخت: <b>امیرمحمد عزت‌پور</b> — تماس: ۰۹۹۳۴۲۹۶۱۹۱. این سامانه کاملاً آفلاین اجرا می‌شود و هیچ داده‌ای به هیچ سروری ارسال نمی‌کند.</p></div>`;
+   <button class="btn p" style="margin-top:12px" id="svc">ذخیره تنظیمات</button>`
+   :'<p class="mu">تنظیمات کلی فقط توسط مدیر سامانه قابل تغییر است. <a href="admin.html">رفتن به پنل مدیریت</a></p>'}</details>
+  <div class="card"><h3>راهنمای کوتاه</h3><ol class="r"><li>«ثبت داده»: هر روز یک جدول برای همه دانش‌آموزان پر کنید؛ برای ورود سریع در هر ستون، عدد را بنویسید و Enter بزنید تا به سطر بعدی همان ستون بروید، سپس یک‌بار «ذخیره همه» بزنید. آزمون‌های تشریحی هم همین‌طور.</li><li>دکمه‌ی «📥 وارد کردن آزمون صبحگاهی از اکسل» در بالای جدول ثبت روزانه: دو ستون «نام» و «درصد» را در اکسل کپی کنید و در پنجره‌ی باز شده بچسبانید (یا فایل CSV اکسل را انتخاب کنید)؛ سامانه نام‌ها را با فهرست دانش‌آموزان تطبیق می‌دهد و پیش از ثبت نهایی، پیش‌نمایش و امکان اصلاح دستی نام‌های تطبیق‌نیافته را نشان می‌دهد.</li><li>«داشبورد و گزارش»: وضعیت مدرسه و گزارش ماهانه؛ روی نام هر دانش‌آموز بزنید تا گزارش فردی باز و قابل چاپ شود.</li><li>«پیگیری»: فهرست خودکار دانش‌آموزان نیازمند توجه و ثبت اقدامات.</li><li>زیرتب «🔍 نمای ثبت‌ها» در «ثبت داده»: یک نمای کلی از روزهای ثبت‌شده‌ی هر دانش‌آموز در هر ماه، و جستجوی کامل تاریخچه‌ی یک دانش‌آموز برای پیدا کردن داده‌ای که اشتباهی در تاریخ نادرست ثبت شده.</li><li>برای حذف داده‌ی یک روز یا یک رکورد اشتباه، از دکمه‌های 🗑 در جدول ثبت روزانه یا در «نمای ثبت‌ها» استفاده کنید.</li></ol>
+  <p class="mu" style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px">طراحی و ساخت: <b>امیرمحمد عزت‌پور</b> — تماس: ۰۹۹۳۴۲۹۶۱۹۱.</p></div>`;
   $('stq').oninput=e=>{const q=e.target.value.trim();document.querySelectorAll('#stbody tr[data-nm]').forEach(tr=>{tr.style.display=!q||tr.dataset.nm.includes(q)?'':'none';});};
-  $('imp').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{
-    let d;try{d=JSON.parse(r.result);if(!Array.isArray(d.students)||typeof d.days!=='object')throw 0;}catch(x){alert('فایل معتبر نیست.');return;}
-    importChoiceModal(d);
-  };r.readAsText(f);e.target.value='';};
-  $('svc').onclick=()=>{
+  if(admin)$('svc').onclick=async()=>{
     const w={};let t=0;Object.keys(COMP).forEach(k=>{w[k]=+$('w_'+k).value||0;t+=w[k];});
     if(Math.round(t)!==100){alert('مجموع وزن‌ها '+t+' است؛ باید دقیقاً ۱۰۰ باشد.');return;}
     const t1=+$('t1').value,t2=+$('t2').value,t3=+$('t3').value;
     if(!(t1>t2&&t2>t3)){alert('ترتیب آستانه‌ها باید عالی > خوب > نیاز به توجه باشد.');return;}
     const gb={};CLASSES.forEach((x,i)=>{const v=$('gc'+i).value;if(v!=='')gb[x]=+v;});
     const cardMsg={};['e','g','a','f','u'].forEach(k=>{cardMsg[k]={t:$('cmt_'+k).value.trim(),s:$('cms_'+k).value.trim()};});
-    S.cfg=Object.assign({},S.cfg,{weights:w,goal:+$('gd').value||2,goalByClass:gb,thresholds:{excellent:t1,good:t2,attention:t3},drop:+$('dr').value||10,penalty:+$('pn').value||0,cardMsg});
-    saveState();toast('تنظیمات ذخیره شد ✓');
+    const cfg=Object.assign({},S.cfg,{weights:w,goal:+$('gd').value||2,goalByClass:gb,thresholds:{excellent:t1,good:t2,attention:t3},drop:+$('dr').value||10,penalty:+$('pn').value||0,cardMsg});
+    $('svc').disabled=true;
+    try{ await remoteSaveCfg(cfg); }catch(e){ netErr(e); $('svc').disabled=false; return; }
+    S.cfg=cfg;markSaved(true);toast('تنظیمات ذخیره شد ✓');$('svc').disabled=false;
   };
 }
 function stModal(id){
-  const s=id?stById(id):{name:'',cls:CLASSES[0],goal:'',active:true};
+  if(!id&&!isAdmin())return;
+  const s=id?stById(id):{name:'',cls:CLASSES[0],goal:'',active:true,group_id:''};
+  const admin=isAdmin();
   const bg=document.createElement('div');bg.className='mbg';
   bg.innerHTML=`<div class="modal"><h3>${id?'ویرایش':'افزودن'} دانش‌آموز</h3>
-  <div class="row"><div class="f"><label>نام و نام‌خانوادگی</label><input id="sn" value="${esc(s.name)}"></div></div>
+  <div class="row"><div class="f"><label>نام و نام‌خانوادگی</label><input id="sn" value="${esc(s.name)}"${admin?'':' disabled'}></div></div>
   <div class="row"><div class="f"><label>کلاس/رشته</label><select id="sc">${CLASSES.map(c=>'<option'+(s.cls===c?' selected':'')+'>'+c+'</option>').join('')}</select></div>
   <div class="f"><label>هدف مطالعه اختصاصی (ساعت، اختیاری)</label><input type="number" step="0.25" id="sg" value="${s.goal??''}"></div></div>
+  ${admin?'<div class="row"><div class="f"><label>زیرگروه (مسئول)</label><select id="sgr"><option value="">— بدون زیرگروه —</option>'+(S.groups||[]).map(g=>'<option value="'+g.id+'"'+(s.group_id===g.id?' selected':'')+'>'+esc(g.name)+'</option>').join('')+'</select></div></div>':''}
   ${id?'<label><input type="checkbox" id="sa" '+(s.active!==false?'checked':'')+'> فعال</label>':''}
   <div style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="ok">ذخیره</button><button class="btn" id="no">انصراف</button></div>
   ${id?'<p class="mu">برای حفظ سوابق، دانش‌آموز حذف نمی‌شود؛ فقط غیرفعال شود.</p>':''}</div>`;
   document.body.appendChild(bg);bg.querySelector('#no').onclick=()=>bg.remove();
-  bg.querySelector('#ok').onclick=()=>{
-    const n=$('sn').value.trim();if(!n){toast('نام را وارد کنید');return;}
-    const o={id:id||('S'+uid()),name:n,cls:$('sc').value,goal:$('sg').value===''?'':+$('sg').value,active:id?$('sa').checked:true};
-    if(id)S.students[S.students.findIndex(x=>x.id===id)]=o;else S.students.push(o);
-    S.students.sort((a,b)=>a.name.localeCompare(b.name,'fa'));saveState();bg.remove();vManage();
+  bg.querySelector('#ok').onclick=async()=>{
+    const n=admin?$('sn').value.trim():s.name;if(!n){toast('نام را وارد کنید');return;}
+    const o={id:id||uid(),name:n,cls:$('sc').value,goal:$('sg').value===''?'':+$('sg').value,active:id?$('sa').checked:true,group_id:admin?($('sgr')?$('sgr').value:s.group_id):s.group_id};
+    const okBtn=bg.querySelector('#ok');okBtn.disabled=true;
+    try{
+      if(id)await remoteUpdateStudent(o,admin);else await remoteInsertStudent(o);
+    }catch(e){ netErr(e); okBtn.disabled=false; return; }
+    if(id)S.students[S.students.findIndex(x=>x.id===id)]=Object.assign({},s,o);else S.students.push(o);
+    S.students.sort((a,b)=>a.name.localeCompare(b.name,'fa'));markSaved(true);bg.remove();vManage();
   };
 }
 function bulkModal(){
+  if(!isAdmin())return;
   const bg=document.createElement('div');bg.className='mbg';
   bg.innerHTML=`<div class="modal"><h3>افزودن گروهی</h3><p class="mu">هر خط یک دانش‌آموز: «نام، کلاس». کلاس باید یکی از این‌ها باشد: ${CLASSES.join(' / ')}. (می‌توانید از Excel کپی کنید)</p><textarea id="bt" rows="10" placeholder="علی احمدی، ریاضی 1"></textarea><div style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="ok">افزودن</button><button class="btn" id="no">انصراف</button></div></div>`;
   document.body.appendChild(bg);bg.querySelector('#no').onclick=()=>bg.remove();
-  bg.querySelector('#ok').onclick=()=>{
-    const bad=[];let n=0;
+  bg.querySelector('#ok').onclick=async()=>{
+    const bad=[],list=[];
     $('bt').value.split('\n').forEach(l=>{l=l.trim();if(!l)return;const p=l.split(/[,،\t]/).map(x=>x.trim());const cls=CLASSES.find(c=>c===p[1]);
-      if(!p[0]||!cls){bad.push(l);return;}S.students.push({id:'S'+uid(),name:p[0],cls,active:true});n++;});
-    S.students.sort((a,b)=>a.name.localeCompare(b.name,'fa'));saveState();bg.remove();vManage();
-    toast(n+' دانش‌آموز اضافه شد'+(bad.length?' — '+bad.length+' خط نامعتبر رد شد':''));
-  };
-}
-function importChoiceModal(d){
-  const bg=document.createElement('div');bg.className='mbg';
-  bg.innerHTML=`<div class="modal"><h3>وارد کردن فایل پشتیبان</h3>
-  <p>این فایل ${((d.students||[]).length)} دانش‌آموز و ${Object.keys(d.days||{}).length} روز داده دارد. چگونه اعمال شود؟</p>
-  <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
-    <button class="btn p" id="mrg" style="text-align:right;padding:12px">🔗 ادغام با اطلاعات فعلی <div class="mu" style="margin-top:4px">پیشنهادی — هیچ داده‌ای پاک نمی‌شود؛ رکوردهای جدید اضافه و رکوردهای مشترک به‌روزرسانی می‌شوند. برای جمع‌آوری کار چند نفر استفاده کنید.</div></button>
-    <button class="btn d" id="rep" style="text-align:right;padding:12px">⚠️ جایگزینی کامل <div class="mu" style="margin-top:4px">همه‌ی داده‌های فعلی پاک و با این فایل جایگزین می‌شود.</div></button>
-    <button class="btn" id="no">انصراف</button>
-  </div></div>`;
-  document.body.appendChild(bg);bg.querySelector('#no').onclick=()=>bg.remove();
-  bg.querySelector('#mrg').onclick=()=>{
-    try{localStorage.setItem(LSB[0],localStorage.getItem(LS)||'');}catch(x){}
-    mergeState(d);saveState();bg.remove();toast('ادغام انجام شد ✓');show('manage');
-  };
-  bg.querySelector('#rep').onclick=()=>{
-    if(!confirm('همه داده‌های فعلی با این فایل جایگزین می‌شود و قابل بازگشت نیست (یک نسخه پشتیبان خودکار نگه داشته می‌شود). ادامه می‌دهید؟'))return;
-    try{localStorage.setItem(LSB[0],localStorage.getItem(LS)||'');}catch(x){}
-    S=d;S.cfg=Object.assign({},DEF_CFG,S.cfg||{});S.exams=S.exams||[];S.actions=S.actions||[];saveState();bg.remove();toast('جایگزین شد ✓');show('manage');
+      if(!p[0]||!cls){bad.push(l);return;}list.push({id:uid(),name:p[0],cls,active:true});});
+    if(!list.length){toast('هیچ ردیف معتبری پیدا نشد.');return;}
+    const okBtn=bg.querySelector('#ok');okBtn.disabled=true;
+    try{ const {error}=await sb.from('students').insert(list.map(s=>({id:s.id,name:s.name,cls:s.cls,active:true}))); if(error)throw error; }
+    catch(e){ netErr(e); okBtn.disabled=false; return; }
+    S.students.push(...list);
+    S.students.sort((a,b)=>a.name.localeCompare(b.name,'fa'));markSaved(true);bg.remove();vManage();
+    toast(list.length+' دانش‌آموز اضافه شد'+(bad.length?' — '+bad.length+' خط نامعتبر رد شد':''));
   };
 }
 function doBackup(){
-  const out=Object.assign({},S,{_app:'سامانه عملکرد تحصیلی مدرسه',_creator:'امیرمحمد عزت‌پور',_contact:'09934296191'});
-  const blob=new Blob([JSON.stringify(out)],{type:'application/json'});
+  const out={students:S.students,days:S.days,exams:S.exams,actions:S.actions,cfg:S.cfg,_app:'سامانه عملکرد تحصیلی مدرسه (نسخه فقط-خواندنی)',_creator:'امیرمحمد عزت‌پور',_contact:'09934296191',_note:'این فایل فقط برای مشاهده است و دیگر توسط سامانه قابل وارد کردن (import) نیست؛ منبع اصلی داده‌ها همیشه پایگاه‌داده‌ی ابری است.'};
+  const blob=new Blob([JSON.stringify(out,null,1)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='school-backup-'+todayISO()+'.json';document.body.appendChild(a);a.click();a.remove();
-  S.lastBackup=Date.now();saveState();banner();toast('فایل پشتیبان دانلود شد ✓');
+  a.download='school-export-'+todayISO()+'.json';document.body.appendChild(a);a.click();a.remove();
+  toast('فایل دانلود شد ✓');
 }
 
-/* ---- شروع ---- */
-if(typeof document!=='undefined'&&document.getElementById('view')){
-  loadState();autoSnapshot();
-  if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
+/* ---- احراز هویت و شروع (بدون نشست معتبر، هیچ داده‌ای از سرور لود نمی‌شود) ---- */
+function showLogin(err){
+  $('loadingGate').style.display='none';
+  $('loginGate').style.display='flex';
+  const el=$('loginErr');
+  if(err){el.style.display='block';el.textContent=err;}else{el.style.display='none';}
+}
+async function afterLogin(session){
+  SESSION=session;
+  const {data:prof,error}=await sb.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
+  if(error||!prof){
+    await sb.auth.signOut();
+    showLogin('این حساب هنوز در سامانه تعریف نشده. با مدیر سامانه تماس بگیرید.');
+    return;
+  }
+  PROFILE=prof;
+  try{ await loadFromSupabase(); }
+  catch(e){ console.error(e); showLogin('خطا در بارگذاری اطلاعات از سرور. اتصال اینترنت را بررسی کنید.'); return; }
+  $('loadingGate').style.display='none';
+  $('loginGate').style.display='none';
+  $('whoami').textContent='👤 '+prof.display_name+(prof.role==='admin'?' (مدیر)':'');
+  $('logoutBtn').style.display='';
+  if(prof.role==='admin'){const a=document.createElement('a');a.href='admin.html';a.className='btn small';a.textContent='⚙️ پنل مدیریت';a.style.marginLeft='6px';$('logoutBtn').before(a);}
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>show(b.dataset.t));
-  window.addEventListener('beforeunload',()=>{});
   document.addEventListener('mousedown',e=>{if(e.target.classList&&e.target.classList.contains('mbg'))e.target.remove();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.querySelector('.mbg:last-of-type');if(m)m.remove();}});
   show(S.students.length?'dash':'manage');
+}
+async function initAuth(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){showLogin();return;}
+  await afterLogin(session);
+}
+if(typeof document!=='undefined'&&document.getElementById('view')){
+  $('loBtn').onclick=async()=>{
+    const email=$('loE').value.trim(),pass=$('loP').value;
+    if(!email||!pass){showLogin('ایمیل و رمز را وارد کنید');return;}
+    $('loBtn').disabled=true;
+    const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+    $('loBtn').disabled=false;
+    if(error){showLogin('ورود ناموفق: ایمیل یا رمز اشتباه است.');return;}
+    $('loginGate').style.display='none';$('loadingGate').style.display='flex';
+    await afterLogin(data.session);
+  };
+  $('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload();};
+  initAuth();
 }
 </script>
 </body>
