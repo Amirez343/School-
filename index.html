@@ -6,38 +6,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>سامانه عملکرد تحصیلی مدرسه</title>
 <style>
-:root{--bg:#f4f6f9;--card:#fff;--bd:#e3e7ee;--tx:#1c2430;--mu:#6b7684;--br:#2f5fd8;--brs:#e8eefd;--ok:#1f9d5a;--oks:#e6f7ee;--wa:#c98a0a;--was:#fdf3e0;--bad:#d6473f;--bads:#fbe9e8;}
+:root{--bg:#eef1f7;--card:#fff;--bd:#e3e7ee;--tx:#1c2430;--mu:#6b7684;--br:#2f5fd8;--br2:#1d47b0;--brs:#e8eefd;--ok:#1f9d5a;--oks:#e6f7ee;--wa:#c98a0a;--was:#fdf3e0;--bad:#d6473f;--bads:#fbe9e8;}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font-family:Tahoma,"Segoe UI",Vazirmatn,sans-serif;font-size:14px}
-header{background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:6px;padding:8px 12px;flex-wrap:wrap}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Tahoma,"Segoe UI",Vazirmatn,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+header{background:linear-gradient(180deg,#fff,#fbfcfe);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:6px;padding:9px 14px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(20,30,60,.04)}
 header b{color:var(--br);margin-left:10px}
-.tab{border:0;background:transparent;padding:8px 14px;border-radius:9px;cursor:pointer;font:inherit;color:var(--tx)}
+.tab{border:0;background:transparent;padding:8px 14px;border-radius:9px;cursor:pointer;font:inherit;color:var(--tx);transition:background .15s,color .15s}
+.tab:hover{background:var(--brs)}
 .tab.on{background:var(--br);color:#fff;font-weight:700}
-main{max-width:1150px;margin:0 auto;padding:14px 12px 60px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+main{max-width:1150px;margin:0 auto;padding:16px 12px 60px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(20,30,60,.05)}
 .grid{display:grid;gap:10px}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
 @media(max-width:800px){.g4,.g3{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
-.stat .l{color:var(--mu);font-size:12px}.stat .v{font-size:24px;font-weight:800;margin-top:4px}
+.stat{border-right:3px solid var(--br)}.stat .l{color:var(--mu);font-size:12px}.stat .v{font-size:24px;font-weight:800;margin-top:4px}
 h3{margin:0 0 10px;font-size:15px}
 table{width:100%;border-collapse:collapse}
 th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
 th{color:var(--mu);font-size:12px;background:var(--card);position:sticky;top:0;z-index:2}
 tbody tr:hover{background:var(--brs)}
 .tw{overflow-x:auto}
-input,select,textarea{font:inherit;padding:6px 8px;border:1px solid var(--bd);border-radius:8px;background:#fff;color:var(--tx);width:100%}
+input,select,textarea{font:inherit;padding:6px 8px;border:1px solid var(--bd);border-radius:8px;background:#fff;color:var(--tx);width:100%;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--br)}
 td input,td select{padding:4px 6px;min-width:58px}
 input[type=checkbox]{width:auto}
-label{display:block;font-size:12px;color:var(--mu);margin-bottom:3px}
+label{display:block;font-size:12px;color:var(--mu);margin-bottom:3px;font-weight:600}
 .f{flex:1;min-width:130px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
-.btn{padding:8px 14px;border-radius:9px;border:1px solid var(--bd);background:#fff;cursor:pointer;font:inherit}
-.btn.p{background:var(--br);color:#fff;border-color:var(--br)}.btn.d{background:var(--bads);color:var(--bad);border-color:transparent}.btn.small{padding:4px 9px;font-size:12px;border-radius:7px}
+.btn{padding:8px 14px;border-radius:9px;border:1px solid var(--bd);background:#fff;cursor:pointer;font:inherit;transition:all .15s}
+.btn:hover{border-color:var(--br);color:var(--br)}
+.btn.p{background:var(--br);color:#fff;border-color:var(--br)}.btn.p:hover{background:var(--br2);color:#fff}.btn.d{background:var(--bads);color:var(--bad);border-color:transparent}.btn.d:hover{background:var(--bad);color:#fff}.btn.small{padding:4px 9px;font-size:12px;border-radius:7px}
+.btn:disabled{opacity:.55;cursor:default}
 .b{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700}
 .b.e{background:var(--oks);color:var(--ok)}.b.g{background:var(--brs);color:var(--br)}.b.a{background:var(--was);color:var(--wa)}.b.f{background:var(--bads);color:var(--bad)}.b.u{background:#eef0f3;color:var(--mu)}
 .mu{color:var(--mu);font-size:12px}
 .bar{height:9px;background:#eceff4;border-radius:5px;overflow:hidden}.bar>div{height:100%;background:var(--br)}
 .warn{background:var(--was);border:1px solid #f0d9a5;color:#7a5200;padding:10px 12px;border-radius:10px;margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .mbg{position:fixed;inset:0;background:rgba(10,14,24,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:12px}
-.modal{background:#fff;border-radius:12px;padding:18px;width:100%;max-width:560px;max-height:90vh;overflow:auto}
+.modal{background:#fff;border-radius:16px;padding:18px;width:100%;max-width:560px;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(10,14,24,.25)}
 input.jdate{cursor:pointer;background:#fff;text-align:center;font-weight:600}
 .jdcell{padding:8px 0;border:1px solid var(--bd);border-radius:8px;background:#fff;cursor:pointer;font:inherit}
 .jdcell:hover{background:var(--brs)}
@@ -917,8 +921,8 @@ function stModal(id){
   <div class="f"><label>هدف مطالعه اختصاصی (ساعت، اختیاری)</label><input type="number" step="0.25" id="sg" value="${s.goal??''}"></div></div>
   ${admin?'<div class="row"><div class="f"><label>زیرگروه (مسئول)</label><select id="sgr"><option value="">— بدون زیرگروه —</option>'+(S.groups||[]).map(g=>'<option value="'+g.id+'"'+(s.group_id===g.id?' selected':'')+'>'+esc(g.name)+'</option>').join('')+'</select></div></div>':''}
   ${id?'<label><input type="checkbox" id="sa" '+(s.active!==false?'checked':'')+'> فعال</label>':''}
-  <div style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="ok">ذخیره</button><button class="btn" id="no">انصراف</button></div>
-  ${id?'<p class="mu">برای حفظ سوابق، دانش‌آموز حذف نمی‌شود؛ فقط غیرفعال شود.</p>':''}</div>`;
+  <div style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="ok">ذخیره</button><button class="btn" id="no">انصراف</button>${id&&admin?'<button class="btn d" id="delSt" style="margin-right:auto">🗑 حذف کامل</button>':''}</div>
+  ${id?'<p class="mu">پیشنهاد می‌شود به‌جای حذف، دانش‌آموز غیرفعال شود تا سوابقش بماند؛ حذف کامل همه‌ی داده‌های او (روزانه، نمرات آزمون، اقدامات) را هم برای همیشه پاک می‌کند.</p>':''}</div>`;
   document.body.appendChild(bg);bg.querySelector('#no').onclick=()=>bg.remove();
   bg.querySelector('#ok').onclick=async()=>{
     const n=admin?$('sn').value.trim():s.name;if(!n){toast('نام را وارد کنید');return;}
@@ -929,6 +933,18 @@ function stModal(id){
     }catch(e){ netErr(e); okBtn.disabled=false; return; }
     if(id)S.students[S.students.findIndex(x=>x.id===id)]=Object.assign({},s,o);else S.students.push(o);
     S.students.sort((a,b)=>a.name.localeCompare(b.name,'fa'));markSaved(true);bg.remove();vManage();
+  };
+  if(id&&admin)bg.querySelector('#delSt').onclick=async()=>{
+    if(!confirm('«'+s.name+'» و همه‌ی داده‌هایش (روزانه، نمرات آزمون، اقدامات) برای همیشه حذف شود؟ این کار قابل بازگشت نیست.'))return;
+    if(prompt('برای تأیید نهایی، نام دانش‌آموز را دقیقاً تایپ کنید:')!==s.name){toast('نام مطابقت نداشت؛ حذف انجام نشد.');return;}
+    const delBtn=bg.querySelector('#delSt');delBtn.disabled=true;
+    try{ const {error}=await sb.from('students').delete().eq('id',id); if(error)throw error; }
+    catch(e){ netErr(e); delBtn.disabled=false; return; }
+    S.students=S.students.filter(x=>x.id!==id);
+    Object.keys(S.days).forEach(d=>{ if(S.days[d][id]){delete S.days[d][id]; if(!Object.keys(S.days[d]).length)delete S.days[d];} });
+    S.exams.forEach(e=>{ if(e.scores&&e.scores[id]!=null)delete e.scores[id]; });
+    S.actions=S.actions.filter(a=>a.sid!==id);
+    markSaved(true);bg.remove();toast('دانش‌آموز و همه‌ی داده‌هایش حذف شد.');vManage();
   };
 }
 function bulkModal(){

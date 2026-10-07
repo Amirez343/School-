@@ -6,37 +6,52 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>پنل مدیریت — سامانه عملکرد تحصیلی</title>
 <style>
-:root{--bg:#f4f6f9;--card:#fff;--bd:#e3e7ee;--tx:#1c2430;--mu:#6b7684;--br:#2f5fd8;--brs:#e8eefd;--ok:#1f9d5a;--oks:#e6f7ee;--bad:#d6473f;--bads:#fbe9e8;}
+:root{--bg:#eef1f7;--card:#fff;--bd:#e3e7ee;--tx:#1c2430;--mu:#6b7684;--br:#2f5fd8;--br2:#1d47b0;--brs:#e8eefd;--ok:#1f9d5a;--oks:#e6f7ee;--bad:#d6473f;--bads:#fbe9e8;--wa:#c98a0a;--was:#fdf3e0;}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font-family:Tahoma,"Segoe UI",Vazirmatn,sans-serif;font-size:14px}
-header{background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:10px;padding:10px 14px;flex-wrap:wrap}
-header b{color:var(--br)}
-main{max-width:980px;margin:0 auto;padding:16px 12px 60px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:14px}
-h3{margin:0 0 10px;font-size:15px}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Tahoma,"Segoe UI",Vazirmatn,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+header{background:linear-gradient(180deg,#fff,#fbfcfe);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:10px;padding:12px 18px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(20,30,60,.04)}
+header b{color:var(--br);font-size:15px}
+main{max-width:1040px;margin:0 auto;padding:20px 14px 70px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(20,30,60,.05)}
+.stat{padding:16px;border-right:3px solid var(--br)}
+.stat.warn{border-color:var(--bad)}
+h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:7px}
 table{width:100%;border-collapse:collapse}
-th,td{padding:7px 8px;border-bottom:1px solid var(--bd);text-align:right}
-th{color:var(--mu);font-size:12px}
-input,select{font:inherit;padding:7px 9px;border:1px solid var(--bd);border-radius:8px;background:#fff;color:var(--tx);width:100%}
-label{display:block;font-size:12px;color:var(--mu);margin-bottom:3px}
+th,td{padding:8px 9px;border-bottom:1px solid var(--bd);text-align:right}
+th{color:var(--mu);font-size:11.5px;font-weight:700;text-transform:none}
+tbody tr:hover{background:#f7f9fd}
+input,select{font:inherit;padding:8px 10px;border:1px solid var(--bd);border-radius:9px;background:#fff;color:var(--tx);width:100%;transition:border-color .15s}
+input:focus,select:focus{outline:none;border-color:var(--br)}
+label{display:block;font-size:12px;color:var(--mu);margin-bottom:4px;font-weight:600}
 .f{flex:1;min-width:160px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
-.btn{padding:8px 14px;border-radius:9px;border:1px solid var(--bd);background:#fff;cursor:pointer;font:inherit}
+.btn{padding:9px 16px;border-radius:10px;border:1px solid var(--bd);background:#fff;cursor:pointer;font:inherit;transition:all .15s}
+.btn:hover{border-color:var(--br);color:var(--br)}
 .btn.p{background:var(--br);color:#fff;border-color:var(--br)}
+.btn.p:hover{background:var(--br2);color:#fff}
 .btn.d{background:var(--bads);color:var(--bad);border-color:transparent}
-.btn.small{padding:4px 9px;font-size:12px;border-radius:7px}
+.btn.d:hover{background:var(--bad);color:#fff}
+.btn.small{padding:5px 10px;font-size:12px;border-radius:7px}
+.btn:disabled{opacity:.55;cursor:default}
 .mu{color:var(--mu);font-size:12px}
-.mbg{position:fixed;inset:0;background:rgba(10,14,24,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:12px}
-.modal{background:#fff;border-radius:12px;padding:18px;width:100%;max-width:420px}
-#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1c2430;color:#fff;padding:9px 18px;border-radius:9px;z-index:99;display:none}
-.chip{display:inline-block;background:var(--brs);color:var(--br);border-radius:99px;padding:2px 10px;font-size:12px;margin:2px}
+.mbg{position:fixed;inset:0;background:rgba(10,14,24,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:12px;backdrop-filter:blur(1px)}
+.modal{background:#fff;border-radius:16px;padding:20px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(10,14,24,.25)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1c2430;color:#fff;padding:10px 20px;border-radius:10px;z-index:99;display:none;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.chip{display:inline-block;background:var(--brs);color:var(--br);border-radius:99px;padding:3px 11px;font-size:12px;margin:2px;font-weight:600}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+@media(max-width:760px){.grid4{grid-template-columns:repeat(2,1fr)}}
+.statv{font-size:26px;font-weight:800;margin-top:2px}
+details summary{cursor:pointer;font-weight:700;padding:4px 0;font-size:15px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:700px){.g3,.g4{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 <header>
   <b>⚙️ پنل مدیریت کلی</b>
-  <span class="mu">دسترسی فقط برای مدیر سامانه</span>
+  <span class="mu">دسترسی فقط برای مدیر سامانه — همه‌ی تنظیمات از همین‌جا</span>
   <span style="flex:1"></span>
-  <a href="index.html" class="btn small">رفتن به سامانه اصلی</a>
+  <a href="index.html" class="btn small">↩ سامانه اصلی</a>
   <span class="mu" id="whoami"></span>
   <button class="btn small" id="logoutBtn" style="display:none">خروج</button>
 </header>
@@ -45,7 +60,7 @@ label{display:block;font-size:12px;color:var(--mu);margin-bottom:3px}
 
 <div id="loginGate" class="mbg">
   <div class="modal" style="max-width:360px">
-    <h3 style="text-align:center">🔐 ورود مدیر کل</h3>
+    <h3 style="text-align:center;justify-content:center">🔐 ورود مدیر کل</h3>
     <div id="loginErr" class="mu" style="color:var(--bad);display:none;margin-bottom:8px"></div>
     <div class="row"><div class="f"><label>ایمیل</label><input id="loE" type="email" autocomplete="username"></div></div>
     <div class="row"><div class="f"><label>رمز عبور</label><input id="loP" type="password" autocomplete="current-password"></div></div>
@@ -64,7 +79,12 @@ const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt
 function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.display='none',2600);}
 function uid(){return (crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now().toString(36)+Math.random().toString(36).slice(2,10));}
 
-let GROUPS=[],STAFF=[],ASSIGN=[],STUDENTS=[]; // ASSIGN: ردیف‌های staff_groups
+const CLASSES=["ریاضی 1","ریاضی 2","انسانی"];
+const COMP={morning:"آزمون صبحگاهی",weekly:"آزمون تشریحی",study:"ساعت مطالعه",logging:"ثبت مطالعه",quality:"کیفیت مطالعه",classroom:"عملکرد کلاسی"};
+const DEF_CFG={weights:{morning:15,weekly:20,study:20,logging:10,quality:15,classroom:20},goal:2,goalByClass:{},thresholds:{excellent:85,good:70,attention:55},drop:10,penalty:5,
+  cardMsg:{e:{t:'',s:''},g:{t:'',s:''},a:{t:'',s:''},f:{t:'',s:''},u:{t:'',s:''}}};
+
+let GROUPS=[],STAFF=[],ASSIGN=[],STUDENTS=[],CFG=null;
 const STAFF_DOMAIN='@staff.local'; // ایمیل داخلی و نامرئی؛ مسئولین فقط نام‌کاربری وارد می‌کنند
 function usernameToEmail(u){return u.trim().toLowerCase().replace(/\s+/g,'')+STAFF_DOMAIN;}
 function validUsername(u){return /^[a-z0-9_.]{3,30}$/i.test(u.trim());}
@@ -94,55 +114,84 @@ async function afterLogin(session){
 }
 
 async function loadAll(){
-  const [gq,pq,aq,sq]=await Promise.all([
+  const [gq,pq,aq,sq,cq]=await Promise.all([
     sb.from('groups').select('*').order('name'),
     sb.from('profiles').select('*').order('display_name'),
     sb.from('staff_groups').select('*'),
-    sb.from('students').select('id,name,cls,group_id,active')
+    sb.from('students').select('id,name,cls,group_id,active,goal'),
+    sb.from('cfg').select('*').eq('id',1).maybeSingle()
   ]);
-  for(const r of [gq,pq,aq,sq]) if(r.error) throw r.error;
+  for(const r of [gq,pq,aq,sq,cq]) if(r.error) throw r.error;
   GROUPS=gq.data||[];
   STAFF=(pq.data||[]).filter(p=>p.role!=='admin');
   ASSIGN=aq.data||[];
   STUDENTS=sq.data||[];
+  CFG=Object.assign({},DEF_CFG,(cq.data&&cq.data.data)||{});
 }
 function groupsOf(staffId){return ASSIGN.filter(a=>a.staff_id===staffId).map(a=>GROUPS.find(g=>g.id===a.group_id)).filter(Boolean);}
-
 function studentsOfGroup(gid){return STUDENTS.filter(s=>s.group_id===gid);}
+
 function render(){
   const unassigned=STUDENTS.filter(s=>!s.group_id&&s.active!==false);
+  const c=CFG;
   $('view').innerHTML=`
-  <div class="grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
-   <div class="card" style="margin:0"><div class="mu">دانش‌آموزان فعال</div><div style="font-size:22px;font-weight:800">${STUDENTS.filter(s=>s.active!==false).length}</div></div>
-   <div class="card" style="margin:0"><div class="mu">زیرگروه‌ها</div><div style="font-size:22px;font-weight:800">${GROUPS.length}</div></div>
-   <div class="card" style="margin:0"><div class="mu">مسئولین</div><div style="font-size:22px;font-weight:800">${STAFF.length}</div></div>
-   <div class="card" style="margin:0"><div class="mu">دانش‌آموزان بدون زیرگروه</div><div style="font-size:22px;font-weight:800;color:${unassigned.length?'var(--bad)':'inherit'}">${unassigned.length}</div></div>
+  <div class="grid4">
+   <div class="card stat" style="margin:0"><div class="mu">دانش‌آموزان فعال</div><div class="statv">${STUDENTS.filter(s=>s.active!==false).length}</div></div>
+   <div class="card stat" style="margin:0"><div class="mu">زیرگروه‌ها</div><div class="statv">${GROUPS.length}</div></div>
+   <div class="card stat" style="margin:0"><div class="mu">مسئولین</div><div class="statv">${STAFF.length}</div></div>
+   <div class="card stat${unassigned.length?' warn':''}" style="margin:0"><div class="mu">دانش‌آموزان بدون زیرگروه</div><div class="statv" style="color:${unassigned.length?'var(--bad)':'inherit'}">${unassigned.length}</div></div>
   </div>
 
-  <div class="card"><h3>زیرگروه‌ها (برای تقسیم دانش‌آموزان بین مسئولین)</h3>
+  <div class="card"><h3>👥 زیرگروه‌ها (برای تقسیم دانش‌آموزان بین مسئولین)</h3>
    <div class="row"><div class="f"><label>نام زیرگروه جدید</label><input id="ngName" placeholder="مثلاً گروه الف"></div><button class="btn p" id="ngAdd">+ افزودن</button></div>
    <table><thead><tr><th>نام</th><th>تعداد دانش‌آموز</th><th>مسئول(ین)</th><th></th></tr></thead><tbody>
    ${GROUPS.map(g=>'<tr><td>'+esc(g.name)+'</td><td>'+studentsOfGroup(g.id).length+'</td><td>'+(STAFF.filter(p=>groupsOf(p.id).some(x=>x.id===g.id)).map(p=>esc(p.display_name)).join('، ')||'<span class="mu">—</span>')+'</td><td><button class="btn d small" data-del="'+g.id+'">حذف</button></td></tr>').join('')||'<tr><td colspan="4" class="mu">هنوز زیرگروهی تعریف نشده.</td></tr>'}
    </tbody></table>
   </div>
 
-  <div class="card"><h3>مسئولین (کاربرانی که فقط به زیرگروه خودشان دسترسی دارند)</h3>
+  <div class="card"><h3>🧑‍🏫 مسئولین (کاربرانی که فقط به زیرگروه خودشان دسترسی دارند)</h3>
    <button class="btn p" id="addStaffBtn">+ افزودن مسئول جدید</button>
-   <table style="margin-top:10px"><thead><tr><th>نام</th><th>نام‌کاربری ورود</th><th>زیرگروه‌های تحت مسئولیت</th><th></th></tr></thead><tbody>
+   <table style="margin-top:12px"><thead><tr><th>نام</th><th>نام‌کاربری ورود</th><th>زیرگروه‌های تحت مسئولیت</th><th></th></tr></thead><tbody>
    ${STAFF.map(p=>'<tr data-id="'+p.id+'"><td>'+esc(p.display_name)+'</td><td class="mu">'+esc(p.username||'—')+'</td><td>'+(groupsOf(p.id).map(g=>'<span class="chip">'+esc(g.name)+'</span>').join('')||'<span class="mu">بدون زیرگروه</span>')+'</td><td style="display:flex;gap:6px"><button class="btn small" data-edit="'+p.id+'">ویرایش زیرگروه‌ها</button><button class="btn d small" data-rm="'+p.id+'">حذف دسترسی</button></td></tr>').join('')||'<tr><td colspan="4" class="mu">هنوز مسئولی اضافه نشده.</td></tr>'}
    </tbody></table>
-   <p class="mu" style="margin-top:8px">«حذف دسترسی» فقط پروفایل و زیرگروه‌های او را حذف می‌کند (دیگر به هیچ داده‌ای دسترسی ندارد). برای حذف کامل امکان ورود، در پنل Supabase، بخش Authentication → Users، همان حساب را پاک کنید.</p>
+   <p class="mu" style="margin-top:8px">«حذف دسترسی» فقط پروفایل و زیرگروه‌های او را حذف می‌کند. برای حذف کامل امکان ورود، در پنل Supabase، بخش Authentication → Users، همان حساب را پاک کنید.</p>
   </div>
 
-  <div class="card"><h3>دانش‌آموزان بدون زیرگروه</h3>
-   ${unassigned.length?'<div class="mu" style="margin-bottom:8px">این‌ها به هیچ مسئولی اختصاص نیافته‌اند؛ تا زمانی که زیرگروه نگیرند، فقط مدیر آن‌ها را می‌بیند.</div><table><thead><tr><th>نام</th><th>کلاس</th></tr></thead><tbody>'+unassigned.map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+esc(s.cls||'')+'</td></tr>').join('')+'</tbody></table>':'<div class="mu">همه‌ی دانش‌آموزان فعال به یک زیرگروه اختصاص دارند.</div>'}
-   <a href="index.html" class="btn" style="margin-top:10px">رفتن به مدیریت دانش‌آموزان برای اختصاص زیرگروه</a>
+  <div class="card"><h3>🎓 همه‌ی دانش‌آموزان — زیرگروه و حذف</h3>
+   <div class="row"><div class="f" style="max-width:260px"><input id="stq" placeholder="جستجوی نام…"></div></div>
+   <div style="max-height:420px;overflow:auto"><table><thead><tr><th>نام</th><th>کلاس</th><th>زیرگروه</th><th>وضعیت</th><th></th></tr></thead><tbody id="stBody">
+   ${STUDENTS.map(s=>studentRow(s)).join('')||'<tr><td colspan="5" class="mu">دانش‌آموزی نیست.</td></tr>'}
+   </tbody></table></div>
   </div>
-  <div class="card"><h3>تنظیمات کلی (وزن شاخص‌ها، آستانه‌ها، پیام‌های کارنامه)</h3>
-   <p class="mu">این موارد از تب «مدیریت» در سامانه اصلی، بخش «⚙️ تنظیمات» قابل تغییر است (چون به داده‌های دانش‌آموزان نیاز دارد).</p>
-   <a href="index.html" class="btn">رفتن به تنظیمات</a>
-  </div>`;
 
+  <details class="card" open><summary>🎛️ تنظیمات حیاتی سامانه (وزن شاخص‌ها، آستانه‌ها، پیام‌های کارنامه)</summary>
+   <div style="margin-top:14px">
+   <h3>وزن شاخص‌ها (مجموع باید ۱۰۰ باشد)</h3><div class="g3">${Object.keys(COMP).map(k=>'<div><label>'+COMP[k]+'</label><input type="number" id="w_'+k+'" value="'+c.weights[k]+'"></div>').join('')}</div>
+   <p class="mu">اگر داده‌ی یک شاخص برای دانش‌آموزی وجود نداشته باشد، وزن آن به‌طور خودکار بین بقیه پخش می‌شود (نه صفر).</p>
+   <h3 style="margin-top:14px">هدف مطالعه روزانه (ساعت)</h3><div class="g4"><div><label>پیش‌فرض مدرسه</label><input type="number" step="0.25" id="gd" value="${c.goal}"></div>${CLASSES.map((x,i)=>'<div><label>'+x+'</label><input type="number" step="0.25" id="gc'+i+'" value="'+(c.goalByClass[x]??'')+'" placeholder="پیش‌فرض"></div>').join('')}</div>
+   <h3 style="margin-top:14px">آستانه‌ها و هشدارها</h3><div class="g4">
+   <div><label>حداقل «عالی»</label><input type="number" id="t1" value="${c.thresholds.excellent}"></div><div><label>حداقل «خوب»</label><input type="number" id="t2" value="${c.thresholds.good}"></div><div><label>حداقل «نیاز به توجه»</label><input type="number" id="t3" value="${c.thresholds.attention}"></div>
+   <div><label>افت قابل‌توجه (امتیاز)</label><input type="number" id="dr" value="${c.drop}"></div></div>
+   <div class="g4" style="margin-top:10px"><div><label>جریمه هر اخراج (امتیاز)</label><input type="number" id="pn" value="${c.penalty}"></div></div>
+   <h3 style="margin-top:16px">پیام‌های کارنامه‌ی دانش‌آموز (دلخواه — می‌توانید خالی بگذارید)</h3>
+   ${[['e','عالی'],['g','خوب'],['a','نیاز به توجه'],['f','نیازمند پیگیری'],['u','داده ناکافی']].map(([k,l])=>`<div class="row"><div class="f" style="flex:0 0 110px;align-self:center"><b>${l}</b></div>
+     <div class="f"><label>عنوان کوتاه</label><input id="cmt_${k}" value="${esc(c.cardMsg[k].t)}"></div>
+     <div class="f"><label>توضیح</label><input id="cms_${k}" value="${esc(c.cardMsg[k].s)}"></div></div>`).join('')}
+   <button class="btn p" style="margin-top:12px" id="svc">ذخیره تنظیمات</button>
+   </div>
+  </details>`;
+
+  wireEvents();
+}
+
+function studentRow(s){
+  return '<tr data-id="'+s.id+'"><td>'+esc(s.name)+'</td><td class="mu">'+esc(s.cls||'')+'</td>'
+    +'<td><select class="grpSel" data-id="'+s.id+'"><option value="">— بدون زیرگروه —</option>'+GROUPS.map(g=>'<option value="'+g.id+'"'+(s.group_id===g.id?' selected':'')+'>'+esc(g.name)+'</option>').join('')+'</select></td>'
+    +'<td>'+(s.active===false?'<span class="mu">غیرفعال</span>':'فعال')+'</td>'
+    +'<td><button class="btn d small" data-delst="'+s.id+'">🗑 حذف</button></td></tr>';
+}
+
+function wireEvents(){
   $('ngAdd').onclick=async()=>{
     const name=$('ngName').value.trim();
     if(!name){toast('نام زیرگروه را وارد کنید');return;}
@@ -172,6 +221,43 @@ function render(){
     STAFF=STAFF.filter(x=>x.id!==id);ASSIGN=ASSIGN.filter(a=>a.staff_id!==id);
     render();toast('دسترسی حذف شد.');
   });
+  $('stq').oninput=e=>{
+    const q=e.target.value.trim();
+    document.querySelectorAll('#stBody tr[data-id]').forEach(tr=>{
+      const nm=tr.querySelector('td').textContent;
+      tr.style.display=!q||nm.includes(q)?'':'none';
+    });
+  };
+  document.querySelectorAll('.grpSel').forEach(sel=>sel.onchange=async e=>{
+    const sid=e.target.dataset.id,gid=e.target.value||null;
+    const {error}=await sb.from('students').update({group_id:gid}).eq('id',sid);
+    if(error){toast('خطا: '+error.message);return;}
+    STUDENTS=STUDENTS.map(s=>s.id===sid?{...s,group_id:gid}:s);
+    toast('زیرگروه بروزرسانی شد ✓');
+  });
+  document.querySelectorAll('[data-delst]').forEach(b=>b.onclick=async()=>{
+    const sid=b.dataset.delst,s=STUDENTS.find(x=>x.id===sid);
+    if(!confirm('«'+s.name+'» و همه‌ی داده‌هایش (روزانه، نمرات آزمون، اقدامات) برای همیشه حذف شود؟ این کار قابل بازگشت نیست.'))return;
+    if(prompt('برای تأیید نهایی، نام دانش‌آموز را دقیقاً تایپ کنید:')!==s.name){toast('نام مطابقت نداشت؛ حذف انجام نشد.');return;}
+    const {error}=await sb.from('students').delete().eq('id',sid);
+    if(error){toast('خطا: '+error.message);return;}
+    STUDENTS=STUDENTS.filter(x=>x.id!==sid);
+    render();toast('دانش‌آموز حذف شد.');
+  });
+  $('svc').onclick=async()=>{
+    const w={};let t=0;Object.keys(COMP).forEach(k=>{w[k]=+$('w_'+k).value||0;t+=w[k];});
+    if(Math.round(t)!==100){alert('مجموع وزن‌ها '+t+' است؛ باید دقیقاً ۱۰۰ باشد.');return;}
+    const t1=+$('t1').value,t2=+$('t2').value,t3=+$('t3').value;
+    if(!(t1>t2&&t2>t3)){alert('ترتیب آستانه‌ها باید عالی > خوب > نیاز به توجه باشد.');return;}
+    const gb={};CLASSES.forEach((x,i)=>{const v=$('gc'+i).value;if(v!=='')gb[x]=+v;});
+    const cardMsg={};['e','g','a','f','u'].forEach(k=>{cardMsg[k]={t:$('cmt_'+k).value.trim(),s:$('cms_'+k).value.trim()};});
+    const cfg=Object.assign({},CFG,{weights:w,goal:+$('gd').value||2,goalByClass:gb,thresholds:{excellent:t1,good:t2,attention:t3},drop:+$('dr').value||10,penalty:+$('pn').value||0,cardMsg});
+    $('svc').disabled=true;
+    const {error}=await sb.from('cfg').update({data:cfg}).eq('id',1);
+    $('svc').disabled=false;
+    if(error){toast('خطا: '+error.message);return;}
+    CFG=cfg;toast('تنظیمات ذخیره شد ✓');
+  };
 }
 
 function staffModal(staffId){
@@ -185,7 +271,7 @@ function staffModal(staffId){
    <div class="row"><div class="f"><label>رمز عبور موقت</label><input id="spP" type="text" placeholder="حداقل ۶ کاراکتر"></div></div>
    <p class="mu">این نام‌کاربری و رمز را به مسئول بدهید تا در سامانه اصلی وارد شود (نیازی به ایمیل ندارد).</p>`}
    <div class="row"><div class="f"><label>زیرگروه(های) تحت مسئولیت</label>
-   ${GROUPS.map(g=>'<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tx)"><input type="checkbox" value="'+g.id+'" class="grpChk" '+(curGroups.has(g.id)?'checked':'')+'> '+esc(g.name)+'</label>').join('')||'<span class="mu">ابتدا یک زیرگروه بسازید.</span>'}
+   ${GROUPS.map(g=>'<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tx);margin-bottom:4px"><input type="checkbox" value="'+g.id+'" class="grpChk" '+(curGroups.has(g.id)?'checked':'')+'> '+esc(g.name)+'</label>').join('')||'<span class="mu">ابتدا یک زیرگروه بسازید.</span>'}
    </div></div>
    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="ok">ذخیره</button><button class="btn" id="no">انصراف</button></div>
   </div>`;
