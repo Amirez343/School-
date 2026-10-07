@@ -858,6 +858,11 @@ function vManage(){
   <div class="card"><h3>☁️ ذخیره‌سازی ابری</h3>
    <p class="mu">تمام داده‌ها به‌صورت زنده در پایگاه‌داده‌ی ابری ذخیره می‌شوند و همه‌ی مسئولین هم‌زمان با یک منبع مشترک کار می‌کنند؛ نیازی به فایل پشتیبان یا ادغام دستی نیست.</p>
    <button class="btn" onclick="doBackup()">⬇️ دانلود یک نسخه‌ی فقط-خواندنی (برای آرامش خاطر شما)</button>
+   ${admin?`<div style="margin-top:12px;border-top:1px solid var(--bd);padding-top:12px">
+   <label>⬆️ آپلود فایل بکاپ (JSON) و ادغام با اطلاعات فعلی</label>
+   <input type="file" id="restoreFile" accept=".json">
+   <p class="mu" style="margin-top:6px">فقط رکوردهایی که در حال حاضر وجود ندارند اضافه می‌شوند (دانش‌آموز، روز، آزمون، اقدام) — چیزی که الان ثبت شده جایگزین یا پاک نمی‌شود. تنظیمات کلی (وزن‌ها و آستانه‌ها) از فایل بکاپ اعمال نمی‌شود.</p>
+   </div>`:''}
   </div>
   <details class="card"><summary>⚙️ تنظیمات (پیش‌فرض‌ها معمولاً کافی است)</summary>
    ${admin?`
@@ -876,6 +881,18 @@ function vManage(){
   <div class="card"><h3>راهنمای کوتاه</h3><ol class="r"><li>«ثبت داده»: هر روز یک جدول برای همه دانش‌آموزان پر کنید؛ برای ورود سریع در هر ستون، عدد را بنویسید و Enter بزنید تا به سطر بعدی همان ستون بروید، سپس یک‌بار «ذخیره همه» بزنید. آزمون‌های تشریحی هم همین‌طور.</li><li>دکمه‌ی «📥 وارد کردن آزمون صبحگاهی از اکسل» در بالای جدول ثبت روزانه: دو ستون «نام» و «درصد» را در اکسل کپی کنید و در پنجره‌ی باز شده بچسبانید (یا فایل CSV اکسل را انتخاب کنید)؛ سامانه نام‌ها را با فهرست دانش‌آموزان تطبیق می‌دهد و پیش از ثبت نهایی، پیش‌نمایش و امکان اصلاح دستی نام‌های تطبیق‌نیافته را نشان می‌دهد.</li><li>«داشبورد و گزارش»: وضعیت مدرسه و گزارش ماهانه؛ روی نام هر دانش‌آموز بزنید تا گزارش فردی باز و قابل چاپ شود.</li><li>«پیگیری»: فهرست خودکار دانش‌آموزان نیازمند توجه و ثبت اقدامات.</li><li>زیرتب «🔍 نمای ثبت‌ها» در «ثبت داده»: یک نمای کلی از روزهای ثبت‌شده‌ی هر دانش‌آموز در هر ماه، و جستجوی کامل تاریخچه‌ی یک دانش‌آموز برای پیدا کردن داده‌ای که اشتباهی در تاریخ نادرست ثبت شده.</li><li>برای حذف داده‌ی یک روز یا یک رکورد اشتباه، از دکمه‌های 🗑 در جدول ثبت روزانه یا در «نمای ثبت‌ها» استفاده کنید.</li></ol>
   <p class="mu" style="margin-top:10px;border-top:1px solid var(--bd);padding-top:8px">طراحی و ساخت: <b>امیرمحمد عزت‌پور</b> — تماس: ۰۹۹۳۴۲۹۶۱۹۱.</p></div>`;
   $('stq').oninput=e=>{const q=e.target.value.trim();document.querySelectorAll('#stbody tr[data-nm]').forEach(tr=>{tr.style.display=!q||tr.dataset.nm.includes(q)?'':'none';});};
+  if(admin&&$('restoreFile'))$('restoreFile').onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=async()=>{
+      let data;
+      try{data=JSON.parse(r.result);}catch(err){toast('فایل JSON معتبر نیست.');e.target.value='';return;}
+      if(!data||!Array.isArray(data.students)){toast('ساختار فایل بکاپ شناسایی نشد.');e.target.value='';return;}
+      if(!confirm('فایل بکاپ بررسی و فقط رکوردهای جدید (که الان وجود ندارند) اضافه می‌شوند. ادامه می‌دهید؟')){e.target.value='';return;}
+      await restoreBackup(data);e.target.value='';
+    };
+    r.readAsText(f,'UTF-8');
+  };
   if(admin)$('svc').onclick=async()=>{
     const w={};let t=0;Object.keys(COMP).forEach(k=>{w[k]=+$('w_'+k).value||0;t+=w[k];});
     if(Math.round(t)!==100){alert('مجموع وزن‌ها '+t+' است؛ باید دقیقاً ۱۰۰ باشد.');return;}
@@ -938,6 +955,67 @@ function doBackup(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='school-export-'+todayISO()+'.json';document.body.appendChild(a);a.click();a.remove();
   toast('فایل دانلود شد ✓');
+}
+
+/* ---- بازیابی/ادغام از فایل بکاپ: فقط رکوردهای جدید اضافه می‌شوند، چیزی جایگزین یا پاک نمی‌شود ---- */
+async function restoreBackup(data){
+  const report={students:0,days:0,exams:0,actions:0,skipped:0};
+  try{
+    // ۱) دانش‌آموزان: تطبیق با نام فعلی؛ در صورت نبود، دانش‌آموز جدید ساخته می‌شود
+    const idMap={}; // شناسه‌ی دانش‌آموز در فایل بکاپ -> شناسه‌ی واقعی در سامانه
+    const toInsert=[];
+    (data.students||[]).forEach(bs=>{
+      if(!bs||!bs.name)return;
+      const match=S.students.find(s=>normName(s.name)===normName(bs.name));
+      if(match){idMap[bs.id]=match.id;}
+      else{
+        const cls=CLASSES.includes(bs.cls)?bs.cls:CLASSES[0];
+        const nid=uid();idMap[bs.id]=nid;
+        toInsert.push({id:nid,name:bs.name,cls,active:bs.active!==false,goal:bs.goal===''||bs.goal==null?null:bs.goal});
+      }
+    });
+    if(toInsert.length){
+      const {error}=await sb.from('students').insert(toInsert);
+      if(error)throw error;
+      S.students.push(...toInsert.map(s=>({...s,goal:s.goal==null?'':s.goal})));
+      S.students.sort((a,b)=>a.name.localeCompare(b.name,'fa'));
+      report.students=toInsert.length;
+    }
+    // ۲) داده‌ی روزانه: فقط اگر برای آن دانش‌آموز/تاریخ هنوز چیزی ثبت نشده باشد
+    const dayJobs=[];
+    Object.entries(data.days||{}).forEach(([date,recs])=>{
+      Object.entries(recs||{}).forEach(([bsid,rec])=>{
+        const sid=idMap[bsid]; if(!sid)return;
+        const already=(S.days[date]||{})[sid];
+        if(already){report.skipped++;return;}
+        dayJobs.push({date,sid,rec});
+      });
+    });
+    for(const j of dayJobs){ await remoteSaveDay(j.date,j.sid,j.rec); S.days[j.date]=S.days[j.date]||{}; S.days[j.date][j.sid]=j.rec; }
+    report.days=dayJobs.length;
+    // ۳) آزمون‌ها: فقط اگر آزمونی با همان تاریخ+عنوان+نوع وجود نداشته باشد
+    for(const be of (data.exams||[])){
+      const dup=S.exams.some(e=>e.date===be.date&&e.title===be.title&&e.type===be.type);
+      if(dup){report.skipped++;continue;}
+      const scores={};
+      Object.entries(be.scores||{}).forEach(([bsid,sc])=>{const sid=idMap[bsid];if(sid)scores[sid]=sc;});
+      const obj={id:uid(),date:be.date,title:be.title,type:be.type,subject:be.subject||'',total:be.total||20,scores};
+      await remoteSaveExam(obj);
+      S.exams.push(obj);report.exams++;
+    }
+    // ۴) اقدامات پیگیری: فقط اگر همان دانش‌آموز/تاریخ/مشکل قبلاً ثبت نشده باشد
+    for(const ba of (data.actions||[])){
+      const sid=idMap[ba.sid]; if(!sid)continue;
+      const dup=S.actions.some(a=>a.sid===sid&&a.date===ba.date&&a.problem===ba.problem);
+      if(dup){report.skipped++;continue;}
+      const obj={id:uid(),sid,date:ba.date,problem:ba.problem||'',action:ba.action||'',owner:ba.owner||'',status:ba.status||'در حال پیگیری',result:ba.result||''};
+      await remoteSaveAction(obj);
+      S.actions.push(obj);report.actions++;
+    }
+  }catch(e){ netErr(e); toast('بازیابی ناقص ماند؛ خطایی در میانه رخ داد.'); vManage(); return; }
+  markSaved(true);
+  toast('بازیابی انجام شد: '+report.students+' دانش‌آموز، '+report.days+' رکورد روزانه، '+report.exams+' آزمون، '+report.actions+' اقدام اضافه شد'+(report.skipped?' ('+report.skipped+' مورد تکراری رد شد)':''));
+  vManage();
 }
 
 /* ---- احراز هویت و شروع (بدون نشست معتبر، هیچ داده‌ای از سرور لود نمی‌شود) ---- */
