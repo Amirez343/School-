@@ -100,6 +100,8 @@ tbody tr:hover{background:rgba(255,255,255,.5)}
 #toast{background:rgba(23,25,42,.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.2)}
 .mbg{background:rgba(30,36,80,.28);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .jdcell{background:rgba(255,255,255,.6)}
+td input.ex{border-color:rgba(200,55,47,.5)!important;background:rgba(251,230,228,.55)!important}
+th.neg{color:var(--bad)}
 @supports not (backdrop-filter:blur(1px)){.card,.modal,header{background:rgba(255,255,255,.95)}}
 @media print{body{background:#fff!important}.card,.modal{backdrop-filter:none;box-shadow:none}.card::before,.modal::before{display:none}}
 </style>
@@ -135,6 +137,9 @@ tbody tr:hover{background:rgba(255,255,255,.5)}
 <div id="loadingGate" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:150;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--mu)">در حال بارگذاری اطلاعات…</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 /* ================= اتصال به Supabase (پایگاه‌داده‌ی ابری؛ بدون اینترنت و ورود معتبر چیزی کار نمی‌کند) ================= */
 const SUPA_URL='https://kskipnhpcxrcgpghurct.supabase.co';
@@ -144,10 +149,10 @@ let PROFILE=null,SESSION=null;
 
 /* ================= CORE (بدون وابستگی به صفحه) ================= */
 const CLASSES=["ریاضی 1","ریاضی 2","انسانی"];
-const COMP={morning:"آزمون صبحگاهی",weekly:"آزمون تشریحی",study:"ساعت مطالعه",logging:"ثبت مطالعه",quality:"کیفیت مطالعه",classroom:"عملکرد کلاسی"};
-const CKEY={morning:'morningScore',weekly:'weeklyScore',study:'studyScore',logging:'loggingScore',quality:'qualityScore',classroom:'classroomScore'};
+const COMP={morning:"آزمون صبحگاهی",weekly:"آزمون تشریحی",taraz:"تراز آزمون گزینه ۲",study:"ساعت مطالعه",logging:"ثبت مطالعه",quality:"کیفیت مطالعه",classroom:"انضباط و تکالیف کلاسی"};
+const CKEY={morning:'morningScore',weekly:'weeklyScore',taraz:'tarazScore',study:'studyScore',logging:'loggingScore',quality:'qualityScore',classroom:'classroomScore'};
 const JM=["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
-const DEF_CFG={weights:{morning:15,weekly:20,study:20,logging:10,quality:15,classroom:20},goal:2,goalByClass:{},thresholds:{excellent:85,good:70,attention:55},drop:10,penalty:5,
+const DEF_CFG={weights:{morning:15,weekly:15,taraz:10,study:20,logging:10,quality:15,classroom:15},tarazMin:3000,tarazMax:9000,defaults:{q:'',h:'',s:'',lg:'',hw:1,ex:''},goal:2,goalByClass:{},thresholds:{excellent:85,good:70,attention:55},drop:10,penalty:5,
   cardMsg:{
     e:{t:'عالی پیش می‌روی! 🌟',s:'همین‌طور با انگیزه ادامه بده، نتیجه عالی گرفتی.'},
     g:{t:'خوب کار می‌کنی 💪',s:'با کمی تلاش بیشتر، این ماه از هر ماه بهتر می‌شه.'},
@@ -156,6 +161,13 @@ const DEF_CFG={weights:{morning:15,weekly:20,study:20,logging:10,quality:15,clas
     u:{t:'داده کافی برای این ماه ثبت نشده',s:'لطفاً ثبت روزانه‌ی خودت را جدی‌تر دنبال کن.'}
   }};
 let S=null, CACHE={}, MONTHS=null;
+function mergeCfg(saved){
+  saved=saved||{};const c=Object.assign({},DEF_CFG,saved);
+  c.weights=Object.assign({},DEF_CFG.weights,saved.weights||{});
+  c.defaults=Object.assign({},DEF_CFG.defaults,saved.defaults||{});
+  c.thresholds=Object.assign({},DEF_CFG.thresholds,saved.thresholds||{});
+  return c;
+}
 
 function newState(){return {v:1,students:[],groups:[],days:{},exams:[],actions:[],cfg:JSON.parse(JSON.stringify(DEF_CFG))};}
 function markSaved(ok){
@@ -196,7 +208,7 @@ async function loadFromSupabase(){
   (esq.data||[]).forEach(r=>{(byExam[r.exam_id]=byExam[r.exam_id]||{})[r.student_id]=r.score;});
   S.exams=(eq.data||[]).map(e=>({id:e.id,date:e.date,title:e.title,type:e.type,subject:e.subject,total:e.total,scores:byExam[e.id]||{}}));
   S.actions=(aq.data||[]).map(a=>({id:a.id,sid:a.student_id,date:a.date,problem:a.problem,action:a.action,owner:a.owner,status:a.status,result:a.result}));
-  S.cfg=Object.assign({},DEF_CFG,(cq.data&&cq.data.data)||{});
+  S.cfg=mergeCfg(cq.data&&cq.data.data);
   CACHE={};MONTHS=null;
 }
 
@@ -361,7 +373,11 @@ function compute(sid,m){
   const recs=dates.map(d=>S.days[d][sid]).filter(Boolean);
   const qs=recs.filter(r=>r.q!=null&&!r.qa).map(r=>r.q);
   const morning=qs.length?avg(qs):null;
-  const ex=S.exams.filter(e=>monthOf(e.date)===m&&e.scores&&e.scores[sid]!=null&&e.total>0).map(e=>({t:e.type,p:e.scores[sid]/e.total*100}));
+  const exAll=S.exams.filter(e=>monthOf(e.date)===m&&e.scores&&e.scores[sid]!=null&&e.total>0);
+  const ex=exAll.filter(e=>e.type!=='taraz').map(e=>({t:e.type,p:e.scores[sid]/e.total*100}));
+  const tzv=exAll.filter(e=>e.type==='taraz').map(e=>e.scores[sid]);
+  const tarazRaw=tzv.length?avg(tzv):null, tzSpan=(cfg.tarazMax-cfg.tarazMin)||1;
+  const taraz=tarazRaw!=null?Math.max(0,Math.min(100,(tarazRaw-cfg.tarazMin)/tzSpan*100)):null;
   const gen=ex.filter(e=>e.t==='general').map(e=>e.p), spe=ex.filter(e=>e.t==='specialized').map(e=>e.p);
   const weekly=ex.length?avg(ex.map(e=>e.p)):null;
   const hs=recs.filter(r=>r.h!=null).map(r=>r.h);
@@ -376,11 +392,19 @@ function compute(sid,m){
   const exp=sum(recs.map(r=>r.ex||0));
   const hasCls=hw.length||exp>0; // «۰ اخراج» ثبت‌شده با خالی‌گذاشتن یکسان است و امتیاز اضافه نمی‌دهد
   const classroom=hwRate!=null?Math.max(0,hwRate-exp*cfg.penalty):(hasCls?Math.max(0,100-exp*cfg.penalty):null);
-  const comps={morning,weekly,study,logging,quality,classroom};
+  const comps={morning,weekly,taraz,study,logging,quality,classroom};
   const av=Object.entries(comps).filter(([k,v])=>v!=null);
   const tw=sum(av.map(([k])=>cfg.weights[k]||0));
   const overall=tw>0?sum(av.map(([k,v])=>v*(cfg.weights[k]||0)))/tw:null;
-  return CACHE[key]={sid,m,morningScore:morning,generalScore:gen.length?avg(gen):null,specialScore:spe.length?avg(spe):null,weeklyScore:weekly,studyScore:study,loggingScore:logging,qualityScore:quality,classroomScore:classroom,overall,completeness:Math.round(av.length/6*100),hwRate,exp,avgH,goal,absent:recs.filter(r=>r.qa).length};
+  return CACHE[key]={sid,m,morningScore:morning,generalScore:gen.length?avg(gen):null,specialScore:spe.length?avg(spe):null,weeklyScore:weekly,tarazScore:taraz,tarazRaw,studyScore:study,loggingScore:logging,qualityScore:quality,classroomScore:classroom,overall,completeness:Math.round(av.length/Object.keys(comps).length*100),hwRate,exp,avgH,goal,absent:recs.filter(r=>r.qa).length};
+}
+function rankOf(sid,m){
+  const st=stById(sid);if(!st)return null;
+  const list=active().map(x=>({s:x,o:compute(x.id,m).overall})).filter(x=>x.o!=null);
+  const me=list.find(x=>x.s.id===sid);if(!me)return null;
+  const rk=a=>1+a.filter(x=>x.o>me.o+1e-9).length;
+  const cl=list.filter(x=>x.s.cls===st.cls);
+  return{school:rk(list),nSchool:list.length,cls:rk(cl),nCls:cl.length};
 }
 function classify(o){
   const t=S.cfg.thresholds;
@@ -570,7 +594,8 @@ function vDash(){
   $('view').innerHTML=`
   <div class="row noprint">${monthSel('dm')}
     <div class="f" style="max-width:200px"><label>کلاس/رشته</label><select id="dc"><option value="">همه</option>${CLASSES.map(c=>'<option'+(DASHCLS===c?' selected':'')+'>'+c+'</option>').join('')}</select></div>
-    <button class="btn" onclick="window.print()">🖨 چاپ گزارش ماهانه</button></div>
+    <button class="btn" onclick="window.print()">🖨 چاپ گزارش ماهانه</button>
+    <button class="btn p" id="allPdf">📦 دانلود همه کارنامه‌ها (PDF)</button></div>
   <h3>گزارش ${mlabel(MON)}${DASHCLS?' — '+DASHCLS:''}</h3>
   ${S.students.length?'':'<div class="card">هنوز دانش‌آموزی ثبت نشده. از تب «مدیریت» شروع کنید.</div>'}
   <div class="grid g4">
@@ -588,22 +613,25 @@ function vDash(){
     <div class="card"><h3>پرتکرارترین نقاط ضعف</h3>${tw.length?tw.slice(0,5).map(([l,n])=>'<div style="display:flex;justify-content:space-between;padding:4px 0"><span>'+l+'</span><b>'+n+' نفر</b></div>').join(''):'<span class="mu">مورد قابل‌توجهی نیست.</span>'}</div>
   </div>
   <div class="card"><h3>روند ۶ ماه اخیر مدرسه</h3>${line(tr.ms.map(m=>JM[+m.split('-')[1]-1]),tr.vals)}</div>
-  <div class="card"><h3>وضعیت دانش‌آموزان <span class="mu">(برای گزارش فردی روی نام کلیک کنید — ترتیب الفبایی است)</span></h3>
-  <div class="tw"><table><thead><tr><th>نام</th><th>کلاس</th><th>امتیاز</th><th>وضعیت</th><th>تغییر</th><th>داده</th><th>نقاط ضعف</th></tr></thead><tbody>
-  ${st.map((s,i)=>({s,r:rs[i]})).sort((a,b)=>(b.r.overall==null)-(a.r.overall==null)||(b.r.overall||0)-(a.r.overall||0)||a.s.name.localeCompare(b.s.name,'fa')).map(({s,r})=>{const p=compute(s.id,addM(MON,-1));return '<tr><td><a href="#" onclick="stReport(\''+s.id+'\');return false">'+esc(s.name)+'</a></td><td>'+esc(s.cls)+'</td><td>'+F(r.overall)+'</td><td>'+badge(r.overall)+'</td><td>'+(r.overall!=null&&p.overall!=null?(r.overall-p.overall>=0?'+':'')+r1(r.overall-p.overall):'—')+'</td><td>'+r.completeness+'٪</td><td class="mu" style="white-space:normal">'+esc(weak(r).join('، ')||'—')+'</td></tr>';}).join('')}
+  <div class="card"><h3>وضعیت دانش‌آموزان <span class="mu">(برای گزارش فردی روی نام کلیک کنید — مرتب بر اساس امتیاز)</span></h3>
+  <div class="tw"><table><thead><tr><th>رتبه</th><th>نام</th><th>کلاس</th><th>امتیاز</th><th>وضعیت</th><th>تغییر</th><th>داده</th><th>نقاط ضعف</th></tr></thead><tbody>
+  ${(()=>{const L=st.map((s,i)=>({s,r:rs[i]})).sort((a,b)=>(a.r.overall==null)-(b.r.overall==null)||(b.r.overall||0)-(a.r.overall||0)||a.s.name.localeCompare(b.s.name,'fa'));
+   const rkOf=r=>r.overall==null?'—':fa2(1+L.filter(x=>x.r.overall!=null&&x.r.overall>r.overall+1e-9).length);
+   return L.map(({s,r})=>{const p=compute(s.id,addM(MON,-1));return '<tr><td><b>'+rkOf(r)+'</b></td><td><a href="#" onclick="stReport(\''+s.id+'\');return false">'+esc(s.name)+'</a></td><td>'+esc(s.cls)+'</td><td>'+F(r.overall)+'</td><td>'+badge(r.overall)+'</td><td>'+(r.overall!=null&&p.overall!=null?(r.overall-p.overall>=0?'+':'')+r1(r.overall-p.overall):'—')+'</td><td>'+r.completeness+'٪</td><td class="mu" style="white-space:normal">'+esc(weak(r).join('، ')||'—')+'</td></tr>';}).join('');})()}
   </tbody></table></div></div>`;
+  $('allPdf').onclick=()=>downloadCards(st.filter(x=>compute(x.id,MON).overall!=null).map(x=>x.id),MON,'کارنامه‌ها — '+mlabel(MON)+(DASHCLS?' — '+DASHCLS:'')+'.zip',st.length);
   $('dm').onchange=e=>{MON=e.target.value;vDash();};$('dc').onchange=e=>{DASHCLS=e.target.value;vDash();};
 }
 function stReport(sid){
   const s=stById(sid),c=compute(sid,MON),p=compute(sid,addM(MON,-1)),rs=reasons(sid,MON),w=weak(c),tr=trend(sid,MON);
-  const rows=[['آزمون صبحگاهی','morningScore'],['آزمون تشریحی — عمومی','generalScore'],['آزمون تشریحی — تخصصی','specialScore'],['آزمون تشریحی — مجموع','weeklyScore'],['ساعت مطالعه','studyScore'],['ثبت مطالعه','loggingScore'],['خودارزیابی کیفیت مطالعه','qualityScore'],['عملکرد کلاسی','classroomScore']];
+  const rows=[['آزمون صبحگاهی','morningScore'],['آزمون تشریحی — عمومی','generalScore'],['آزمون تشریحی — تخصصی','specialScore'],['آزمون تشریحی — مجموع','weeklyScore'],['تراز آزمون گزینه ۲ (تبدیل‌شده به ۱۰۰)','tarazScore'],['ساعت مطالعه','studyScore'],['ثبت مطالعه','loggingScore'],['خودارزیابی کیفیت مطالعه','qualityScore'],['انضباط و تکالیف کلاسی','classroomScore']];
   const strong=Object.keys(COMP).filter(k=>c[CKEY[k]]!=null&&c[CKEY[k]]>=S.cfg.thresholds.good).map(k=>COMP[k]);
   const acts=S.actions.filter(a=>a.sid===sid).sort((a,b)=>a.date<b.date?1:-1).slice(0,3);
   const bg=document.createElement('div');bg.className='mbg';
   bg.innerHTML=`<div class="modal"><div style="display:flex;justify-content:space-between"><div><h3 style="margin:0">${esc(s.name)}</h3><span class="mu">${esc(s.cls)} — ${mlabel(MON)}</span></div><div style="text-align:left"><div style="font-size:26px;font-weight:800">${F(c.overall)}</div>${badge(c.overall)}</div></div>
   <p class="mu">تغییر نسبت به ماه قبل: ${c.overall!=null&&p.overall!=null?r1(c.overall-p.overall):'—'} — کامل‌بودن داده: ${c.completeness}٪</p>
   <table><tbody>${rows.map(([l,k])=>'<tr><td>'+l+'</td><td>'+F(c[k])+(c[k]==null?' <span class="mu">(بدون داده)</span>':'')+'</td></tr>').join('')}
-  <tr><td>نرخ انجام تکالیف</td><td>${F(c.hwRate)}${c.hwRate!=null?'٪':''}</td></tr><tr><td>تعداد اخراج از کلاس</td><td>${c.exp}</td></tr><tr><td>میانگین مطالعه روزانه / هدف</td><td>${F(c.avgH)} / ${c.goal} ساعت</td></tr></tbody></table>
+  <tr><td>نرخ انجام تکالیف</td><td>${F(c.hwRate)}${c.hwRate!=null?'٪':''}</td></tr>${c.tarazRaw!=null?'<tr><td>میانگین تراز خام</td><td>'+fa2(Math.round(c.tarazRaw))+'</td></tr>':''}<tr><td style="color:var(--bad)">⚠️ تعداد اخراج از کلاس (مورد منفی)</td><td style="color:${c.exp>0?'var(--bad)':'inherit'};font-weight:${c.exp>0?800:400}">${c.exp}</td></tr><tr><td>میانگین مطالعه روزانه / هدف</td><td>${F(c.avgH)} / ${c.goal} ساعت</td></tr></tbody></table>
   <p><b>نقاط قوت:</b> ${esc(strong.join('، ')||'—')}<br><b>نقاط ضعف:</b> ${esc(w.join('، ')||'—')}</p>
   ${line(tr.ms.map(m=>JM[+m.split('-')[1]-1]),tr.vals)}
   <b>پیشنهاد پیگیری:</b>${rs.length?'<ul class="r">'+rs.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':' <span class="mu">موردی شناسایی نشد.</span>'}
@@ -613,54 +641,116 @@ function stReport(sid){
   bg.querySelector('#pr1').onclick=()=>window.print();
   bg.querySelector('#cardBtn').onclick=()=>{bg.remove();studentCard(sid);};
 }
-const COMP_ICON={morning:'🌅',weekly:'📝',study:'⏱️',logging:'📔',quality:'⭐',classroom:'🏫'};
-function studentCard(sid){
-  const s=stById(sid),c=compute(sid,MON),tr=trend(sid,MON);
+const COMP_ICON={morning:'🌅',weekly:'📝',taraz:'🎯',study:'⏱️',logging:'📔',quality:'⭐',classroom:'🏫'};
+function rankTile(label,rank,n){
+  const pal=rank===1?['#fbe28a','#e0a72c','#5a3d00','🥇']:rank===2?['#eef1f6','#aab3c2','#3b4455','🥈']:rank===3?['#f3c9a5','#c0804a','#4d2a0c','🥉']:['#dfe6ff','#8ea3f2','#202d68',''];
+  return `<div style="flex:1;display:flex;align-items:center;gap:10px;background:#f7f8fb;border-radius:16px;padding:10px 12px">
+    <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(145deg,${pal[0]},${pal[1]});display:flex;align-items:center;justify-content:center;font-weight:800;font-size:21px;color:${pal[2]};box-shadow:inset 0 2px 3px rgba(255,255,255,.75),0 3px 8px rgba(30,40,80,.18)">${fa2(rank)}</div>
+    <div><div style="font-size:12px;color:#6b7684">${pal[3]} ${label}</div><div style="font-weight:800;font-size:15px">${fa2(rank)} <span style="font-weight:500;font-size:12px;color:#6b7684">از ${fa2(n)} نفر</span></div></div></div>`;
+}
+function cardHTML(sid,m){
+  m=m||MON;
+  const s=stById(sid),c=compute(sid,m),tr=trend(sid,m),rk=rankOf(sid,m);
   const fr=(S.cfg.cardMsg&&S.cfg.cardMsg[classify(c.overall).c])||{t:'',s:''};
   const strong=Object.keys(COMP).filter(k=>c[CKEY[k]]!=null&&c[CKEY[k]]>=S.cfg.thresholds.good);
   const weakK=Object.keys(COMP).filter(k=>c[CKEY[k]]!=null&&c[CKEY[k]]<S.cfg.thresholds.attention);
   const tipK=weakK[0]||Object.keys(COMP).filter(k=>c[CKEY[k]]!=null).sort((a,b)=>c[CKEY[a]]-c[CKEY[b]])[0];
-  const tipTxt={morning:'صبح‌ها چند دقیقه زودتر آزمون صبحگاهی را مرور کن.',weekly:'قبل از آزمون‌های تشریحی، خلاصه درس‌ها را یک‌بار دوره کن.',
+  const tipTxt={morning:'صبح‌ها چند دقیقه زودتر آزمون صبحگاهی را مرور کن.',weekly:'قبل از آزمون‌های تشریحی، خلاصه درس‌ها را یک‌بار دوره کن.',taraz:'بعد از هر آزمون گزینه ۲، غلط‌ها و نزده‌هایت را تحلیل کن و دوباره حل کن.',
     study:'سعی کن ساعت مطالعه‌ات را به هدف تعیین‌شده نزدیک‌تر کنی.',logging:'هر شب چند خط درباره‌ی مطالعه‌ی امروزت در دفتر بنویس.',
-    quality:'موقع مطالعه محیط آرام‌تری انتخاب کن تا کیفیتش بالاتر بره.',classroom:'روی انجام کامل تکالیف کلاسی تمرکز کن.'};
-  const ov=Math.round(c.overall||0),ang=Math.max(0,Math.min(100,c.overall||0))*3.6;
+    quality:'موقع مطالعه محیط آرام‌تری انتخاب کن تا کیفیتش بالاتر بره.',classroom:'تکالیف را کامل انجام بده و رفتار کلاسی‌ات را مرتب نگه دار.'};
+  const ov=Math.round(c.overall||0),pct=Math.max(0,Math.min(100,c.overall||0)),CIR=2*Math.PI*52;
   const color=c.overall==null?'#c9cfd8':c.overall>=S.cfg.thresholds.excellent?'#1f9d5a':c.overall>=S.cfg.thresholds.good?'#2f5fd8':c.overall>=S.cfg.thresholds.attention?'#e0a72c':'#d6473f';
-  const ov2=document.createElement('div');ov2.id='cardOv';
-  ov2.style.cssText='position:fixed;inset:0;background:linear-gradient(160deg,#eef2fb,#fdf6ee);z-index:80;overflow:auto;padding:22px 12px;';
-  ov2.innerHTML=`
-  <div class="noprint" style="max-width:640px;margin:0 auto 12px;display:flex;gap:8px;justify-content:flex-end">
-   <button class="btn p" onclick="window.print()">🖨 چاپ کارنامه</button><button class="btn" id="cardCl">بستن</button></div>
-  <div style="max-width:640px;margin:0 auto;background:#fff;border-radius:20px;padding:26px 24px;box-shadow:0 8px 30px rgba(20,30,60,.12);font-family:inherit">
+  const scope=isAdmin()?'مدرسه':'گروه';
+  return `<div style="width:640px;max-width:100%;margin:0 auto;background:#fff;border-radius:22px;padding:26px 24px;box-shadow:0 8px 30px rgba(20,30,60,.12);font-family:inherit;color:#161b2e;direction:rtl">
    <div style="text-align:center;margin-bottom:6px"><div style="font-size:13px;color:#6b7684">کارنامه‌ی عملکرد تحصیلی</div>
    <div style="font-size:24px;font-weight:800;margin:4px 0">${esc(s.name)}</div>
-   <div style="color:#6b7684">${esc(s.cls)} — ${mlabel(MON)}</div></div>
-   <div style="display:flex;justify-content:center;margin:18px 0">
-    <div style="width:150px;height:150px;border-radius:50%;background:conic-gradient(${color} ${ang}deg,#eef0f3 0);display:flex;align-items:center;justify-content:center">
-     <div style="width:118px;height:118px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <div style="font-size:32px;font-weight:800;color:${color}">${c.overall==null?'—':ov}</div><div style="font-size:11px;color:#6b7684">از ۱۰۰</div></div></div></div>
-   ${(fr.t||fr.s)?`<div style="text-align:center;margin-bottom:18px">${fr.t?'<div style="font-weight:800;font-size:16px">'+esc(fr.t)+'</div>':''}${fr.s?'<div style="color:#6b7684;font-size:13px;margin-top:4px">'+esc(fr.s)+'</div>':''}</div>`:''}
-   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+   <div style="color:#6b7684">${esc(s.cls)} — ${mlabel(m)}</div></div>
+   <div style="display:flex;justify-content:center;margin:16px 0 12px">
+    <div style="position:relative;width:150px;height:150px">
+     <svg width="150" height="150" viewBox="0 0 130 130" style="position:absolute;inset:0"><circle cx="65" cy="65" r="52" fill="none" stroke="#eef0f3" stroke-width="12"/><circle cx="65" cy="65" r="52" fill="none" stroke="${color}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${CIR*pct/100} ${CIR}" transform="rotate(-90 65 65)"/></svg>
+     <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font-size:34px;font-weight:800;color:${color}">${c.overall==null?'—':ov}</div><div style="font-size:11px;color:#6b7684">از ۱۰۰</div></div></div></div>
+   ${rk?`<div style="display:flex;gap:10px;margin:0 0 14px">${rankTile('رتبه در '+scope,rk.school,rk.nSchool)}${rankTile('رتبه در کلاس',rk.cls,rk.nCls)}</div>`:''}
+   ${(fr.t||fr.s)?`<div style="text-align:center;margin-bottom:16px">${fr.t?'<div style="font-weight:800;font-size:16px">'+esc(fr.t)+'</div>':''}${fr.s?'<div style="color:#6b7684;font-size:13px;margin-top:4px">'+esc(fr.s)+'</div>':''}</div>`:''}
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
     ${Object.keys(COMP).map(k=>{const v=c[CKEY[k]];return `<div style="background:#f7f8fb;border-radius:12px;padding:10px 12px">
-      <div style="display:flex;justify-content:space-between;font-size:13px"><span>${COMP_ICON[k]} ${COMP[k]}</span><b>${v==null?'—':r1(v)}</b></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span>${COMP_ICON[k]} ${COMP[k]}</span><b>${v==null?'—':fa2(r1(v))}</b></div>
+      ${k==='taraz'&&c.tarazRaw!=null?'<div style="font-size:11px;color:#6b7684;margin-top:2px">تراز: '+fa2(Math.round(c.tarazRaw))+'</div>':''}
       <div class="bar" style="margin-top:6px"><div style="width:${Math.max(0,Math.min(100,v||0))}%;background:${color}"></div></div></div>`;}).join('')}
    </div>
-   ${strong.length?`<div style="background:#e6f7ee;border-radius:12px;padding:10px 14px;margin-bottom:10px"><b>✅ نقاط قوت این ماه:</b> ${strong.map(k=>COMP[k]).join('، ')}</div>`:''}
-   ${tipK?`<div style="background:#fdf3e0;border-radius:12px;padding:10px 14px;margin-bottom:10px"><b>💡 پیشنهاد این ماه:</b> ${tipTxt[tipK]}</div>`:''}
-   <div style="margin:14px 0">${line(tr.ms.map(m=>JM[+m.split('-')[1]-1]),tr.vals)}</div>
-   <div style="display:flex;justify-content:space-between;margin-top:24px;font-size:12px;color:#6b7684">
+   ${c.exp>0?`<div style="background:#fbe6e4;border-radius:12px;padding:10px 14px;margin-bottom:10px;color:#a32a23"><b>⚠️ موارد انضباطی (منفی):</b> ${fa2(c.exp)} بار اخراج از کلاس در این ماه</div>`:''}
+   ${strong.length?`<div style="background:#e3f6ea;border-radius:12px;padding:10px 14px;margin-bottom:10px"><b>✅ نقاط قوت این ماه:</b> ${strong.map(k=>COMP[k]).join('، ')}</div>`:''}
+   ${tipK?`<div style="background:#fdf0da;border-radius:12px;padding:10px 14px;margin-bottom:10px"><b>💡 پیشنهاد این ماه:</b> ${tipTxt[tipK]}</div>`:''}
+   <div style="margin:12px 0">${line(tr.ms.map(x=>JM[+x.split('-')[1]-1]),tr.vals)}</div>
+   <div style="display:flex;justify-content:space-between;margin-top:22px;font-size:12px;color:#6b7684">
     <div>امضای معلم: ____________</div><div>امضای ولی: ____________</div><div>تاریخ: ${jdate(todayISO())}</div></div>
    <div style="text-align:center;margin-top:10px;font-size:10px;color:#b8bfca">سامانه عملکرد تحصیلی — طراحی: امیرمحمد عزت‌پور</div>
   </div>`;
-  document.body.appendChild(ov2);ov2.querySelector('#cardCl').onclick=()=>ov2.remove();
+}
+function studentCard(sid){
+  const s=stById(sid);
+  const ov2=document.createElement('div');ov2.id='cardOv';
+  ov2.style.cssText='position:fixed;inset:0;background:linear-gradient(160deg,#eef2fb,#fdf6ee);z-index:80;overflow:auto;padding:22px 12px;';
+  ov2.innerHTML=`<div class="noprint" style="max-width:640px;margin:0 auto 12px;display:flex;gap:8px;justify-content:flex-end">
+   <button class="btn p" id="cardPdf">⬇️ دانلود PDF</button><button class="btn" onclick="window.print()">🖨 چاپ</button><button class="btn" id="cardCl">بستن</button></div>`+cardHTML(sid,MON);
+  document.body.appendChild(ov2);
+  ov2.querySelector('#cardCl').onclick=()=>ov2.remove();
+  ov2.querySelector('#cardPdf').onclick=()=>downloadCards([sid],MON,null,1);
+}
+const safeName=n=>String(n).replace(/[\\/:*?"<>|‌‏‎]+/g,' ').replace(/\s+/g,' ').trim()||'کارنامه';
+async function cardPdfBlob(sid,m){
+  const host=document.createElement('div');
+  host.style.cssText='position:fixed;left:-10000px;top:0;width:690px;padding:12px;background:#fff';
+  host.innerHTML=cardHTML(sid,m);document.body.appendChild(host);
+  try{
+    const cv=await html2canvas(host,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false});
+    const {jsPDF}=window.jspdf,pdf=new jsPDF({unit:'pt',format:'a4'}),pw=595.28,ph=841.89,mg=24;
+    let w=pw-2*mg,h=cv.height*w/cv.width;if(h>ph-2*mg){h=ph-2*mg;w=cv.width*h/cv.height;}
+    pdf.addImage(cv.toDataURL('image/jpeg',.93),'JPEG',(pw-w)/2,mg,w,h);
+    return pdf.output('blob');
+  }finally{host.remove();}
+}
+function saveBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);}
+async function downloadCards(ids,m,zipName,totalCount){
+  if(!window.html2canvas||!window.jspdf||(ids.length>1&&!window.JSZip)){toast('کتابخانه‌ی ساخت PDF بارگذاری نشده؛ اتصال اینترنت را بررسی و صفحه را تازه کنید.');return;}
+  if(!ids.length){toast('دانش‌آموزی با داده‌ی کافی برای صدور کارنامه نیست.');return;}
+  const bg=document.createElement('div');bg.className='mbg';bg.style.zIndex=300;
+  bg.innerHTML='<div class="modal" style="max-width:360px;text-align:center"><h3 style="justify-content:center">در حال ساخت کارنامه‌ها…</h3><div class="bar" style="margin:12px 0"><div id="dlBar" style="width:0%"></div></div><div id="dlTxt" class="mu">آماده‌سازی…</div></div>';
+  document.body.appendChild(bg);
+  try{
+    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    if(ids.length===1){
+      bg.querySelector('#dlTxt').textContent=stById(ids[0]).name;
+      saveBlob(await cardPdfBlob(ids[0],m),safeName(stById(ids[0]).name)+'.pdf');
+    }else{
+      const zip=new JSZip(),used={};
+      for(let i=0;i<ids.length;i++){
+        const nm=stById(ids[i]).name;
+        bg.querySelector('#dlTxt').textContent=fa2(i+1)+' از '+fa2(ids.length)+' — '+nm;
+        bg.querySelector('#dlBar').style.width=(i/ids.length*100)+'%';
+        await new Promise(r=>setTimeout(r,20));
+        let fn=safeName(nm);used[fn]=(used[fn]||0)+1;if(used[fn]>1)fn+=' ('+used[fn]+')';
+        zip.file(fn+'.pdf',await cardPdfBlob(ids[i],m));
+      }
+      bg.querySelector('#dlTxt').textContent='در حال فشرده‌سازی…';
+      saveBlob(await zip.generateAsync({type:'blob'}),zipName||'کارنامه‌ها.zip');
+      const skipped=(totalCount||ids.length)-ids.length;
+      toast(fa2(ids.length)+' کارنامه دانلود شد'+(skipped>0?' ('+fa2(skipped)+' نفر بدون داده‌ی کافی رد شدند)':'')+' ✓');
+    }
+  }catch(e){console.error(e);toast('⚠️ خطا در ساخت PDF: '+(e.message||e));}
+  finally{bg.remove();}
 }
 
 /* ---- ثبت داده ---- */
 function vEntry(){
-  $('view').innerHTML='<div class="sub"><button class="btn'+(SUBENTRY==='daily'?' p':'')+'" onclick="SUBENTRY=\'daily\';vEntry()">ثبت روزانه</button><button class="btn'+(SUBENTRY==='exam'?' p':'')+'" onclick="SUBENTRY=\'exam\';vEntry()">آزمون تشریحی</button><button class="btn'+(SUBENTRY==='overview'?' p':'')+'" onclick="SUBENTRY=\'overview\';vEntry()">🔍 نمای ثبت‌ها</button></div><div id="ent"></div>';
+  $('view').innerHTML='<div class="sub"><button class="btn'+(SUBENTRY==='daily'?' p':'')+'" onclick="SUBENTRY=\'daily\';vEntry()">ثبت روزانه</button><button class="btn'+(SUBENTRY==='exam'?' p':'')+'" onclick="SUBENTRY=\'exam\';vEntry()">آزمون‌ها (تشریحی / تراز)</button><button class="btn'+(SUBENTRY==='overview'?' p':'')+'" onclick="SUBENTRY=\'overview\';vEntry()">🔍 نمای ثبت‌ها</button></div><div id="ent"></div>';
   if(SUBENTRY==='daily')entDaily(todayISO(),'');else if(SUBENTRY==='exam')entExam();else entOverview();
 }
 function entDaily(date,cls){
   const st=active().filter(s=>!cls||s.cls===cls),day=S.days[date]||{};
+  const D=S.cfg.defaults||{},defRec={};
+  if(D.q!==''&&D.q!=null)defRec.q=+D.q; if(D.h!==''&&D.h!=null){const pp=parseHM(String(D.h));if(pp&&!pp.invalid&&pp.value!=null)defRec.h=pp.value;}
+  if(D.s!==''&&D.s!=null)defRec.s=+D.s; if(D.lg!==''&&D.lg!=null)defRec.lg=+D.lg; if(D.hw!==''&&D.hw!=null)defRec.hw=+D.hw; if(D.ex!==''&&D.ex!=null)defRec.ex=+D.ex;
+  const hasDef=Object.keys(defRec).length>0;
   const sel=(v,opts)=>opts.map(([k,l])=>'<option value="'+k+'"'+(String(v)===String(k)?' selected':'')+'>'+l+'</option>').join('');
   $('ent').innerHTML=`<div class="card"><div class="row">
    <div class="f"><label>تاریخ</label>${jalaliInputHTML('dd',date)}</div>
@@ -669,9 +759,9 @@ function entDaily(date,cls){
    <button class="btn p" id="sv">ذخیره همه</button>
    <button class="btn d" id="clrDay">🗑 حذف داده‌های این روز</button>
    <button class="btn" id="impXl">📥 وارد کردن آزمون صبحگاهی از اکسل</button></div>
-   <div class="mu" style="margin-bottom:8px">سلول خالی = «داده ثبت نشده» و هرگز صفر حساب نمی‌شود. اگر دانش‌آموزی غایب بود تیک «غایب» را بزنید. فرمت ساعت مطالعه: اول ساعت سپس نقطه سپس دقیقه — مثلاً <b>1.30</b> یعنی یک ساعت و سی دقیقه (نه عدد اعشاری). درصد آزمون صبحگاهی در صورت نمره‌ی منفی (به‌دلیل جریمه‌ی پاسخ غلط) می‌تواند عدد منفی هم باشد. کل ورود اطلاعات بدون نیاز به ماوس انجام می‌شود: فوکوس از ابتدا روی اولین خانه است، Tab بین خانه‌های یک ردیف و Enter برای رفتن به همان ستون در ردیف بعدی حرکت می‌کند، و با Enter روی آخرین خانه‌ی آخرین ردیف، اطلاعات خودکار ذخیره می‌شود. (Ctrl+S هم هر زمان ذخیره می‌کند)</div>
-   <div class="tw" style="max-height:68vh"><table><thead><tr><th>نام</th><th>آزمون صبحگاهی ٪</th><th>غایب</th><th>ساعت مطالعه</th><th>ستاره (۰–۳)</th><th>دفتر مطالعه</th><th>تکلیف</th><th>اخراج</th><th></th></tr></thead><tbody>
-   ${st.map(s=>{const r=day[s.id]||{};return '<tr data-id="'+s.id+'" data-nm="'+esc(s.name)+'"><td>'+esc(s.name)+'</td>'
+   <div class="mu" style="margin-bottom:8px">${hasDef?'<b>مقادیر پیش‌فرض (طبق تنظیمات مدیر) در ردیف‌های بدون ثبت از قبل پر شده‌اند؛ فقط موارد متفاوت را تغییر دهید.</b> ':''}سلول خالی = «داده ثبت نشده» و هرگز صفر حساب نمی‌شود. اگر دانش‌آموزی غایب بود تیک «غایب» را بزنید. فرمت ساعت مطالعه: اول ساعت سپس نقطه سپس دقیقه — مثلاً <b>1.30</b> یعنی یک ساعت و سی دقیقه (نه عدد اعشاری). درصد آزمون صبحگاهی در صورت نمره‌ی منفی (به‌دلیل جریمه‌ی پاسخ غلط) می‌تواند عدد منفی هم باشد. کل ورود اطلاعات بدون نیاز به ماوس انجام می‌شود: فوکوس از ابتدا روی اولین خانه است، Tab بین خانه‌های یک ردیف و Enter برای رفتن به همان ستون در ردیف بعدی حرکت می‌کند، و با Enter روی آخرین خانه‌ی آخرین ردیف، اطلاعات خودکار ذخیره می‌شود. (Ctrl+S هم هر زمان ذخیره می‌کند)</div>
+   <div class="tw" style="max-height:68vh"><table><thead><tr><th>نام</th><th>آزمون صبحگاهی ٪</th><th>غایب</th><th>ساعت مطالعه</th><th>ستاره (۰–۳)</th><th>دفتر مطالعه</th><th>تکلیف</th><th class="neg">اخراج از کلاس ⚠️ (منفی)</th><th></th></tr></thead><tbody>
+   ${st.map(s=>{const real=day[s.id],r=real||defRec;return '<tr data-id="'+s.id+'" data-nm="'+esc(s.name)+'"><td>'+esc(s.name)+'</td>'
     +'<td><input type="number" max="100" step="0.5" class="q" value="'+(r.q!=null?r.q:'')+'"></td>'
     +'<td><input type="checkbox" class="qa"'+(r.qa?' checked':'')+'></td>'
     +'<td><input type="text" inputmode="decimal" class="h" placeholder="مثلاً 1.30" value="'+(r.h!=null?formatHM(r.h):'')+'"></td>'
@@ -679,7 +769,7 @@ function entDaily(date,cls){
     +'<td><select class="lg">'+sel(r.lg==null?'':r.lg,[['','—'],[1,'ثبت شد'],[0,'ثبت نشد']])+'</select></td>'
     +'<td><select class="hw">'+sel(r.hw==null?'':r.hw,[['','—'],[1,'انجام داد'],[0,'انجام نداد']])+'</select></td>'
     +'<td><input type="number" min="0" step="1" class="ex" value="'+(r.ex!=null?r.ex:'')+'"></td>'
-    +'<td>'+(Object.keys(r).length?'<button type="button" class="btn d small rowdel" data-id="'+s.id+'" title="حذف رکورد این دانش‌آموز در این روز">🗑</button>':'')+'</td></tr>';}).join('')||'<tr><td colspan="9" class="mu">دانش‌آموزی نیست.</td></tr>'}
+    +'<td>'+(real&&Object.keys(real).length?'<button type="button" class="btn d small rowdel" data-id="'+s.id+'" title="حذف رکورد این دانش‌آموز در این روز">🗑</button>':'')+'</td></tr>';}).join('')||'<tr><td colspan="9" class="mu">دانش‌آموزی نیست.</td></tr>'}
    </tbody></table></div></div>`;
   wireJalali('dd',iso=>entDaily(iso,$('dcl').value));
   $('dcl').onchange=e=>entDaily(isoOf('dd'),e.target.value);
@@ -759,16 +849,28 @@ function entExam(){
   $('ent').innerHTML=`<div class="card"><h3>${e?'ویرایش آزمون':'آزمون جدید'}</h3><div class="row">
    <div class="f"><label>تاریخ</label>${jalaliInputHTML('xd',e?e.date:todayISO())}</div>
    <div class="f"><label>عنوان</label><input id="xt" value="${e?esc(e.title):''}"></div>
-   <div class="f"><label>نوع</label><select id="xy"><option value="general"${e&&e.type==='general'?' selected':''}>عمومی</option><option value="specialized"${e&&e.type==='specialized'?' selected':''}>تخصصی</option></select></div>
+   <div class="f"><label>نوع</label><select id="xy"><option value="general"${e&&e.type==='general'?' selected':''}>عمومی</option><option value="specialized"${e&&e.type==='specialized'?' selected':''}>تخصصی</option><option value="taraz"${e&&e.type==='taraz'?' selected':''}>تراز آزمون گزینه ۲</option></select></div>
    <div class="f"><label>درس (اختیاری)</label><input id="xs" value="${e?esc(e.subject||''):''}"></div>
    <div class="f" style="max-width:110px"><label>نمره کل</label><input type="number" id="xm" value="${e?e.total:20}"></div></div>
+   <div class="row"><div class="f"><label>چسباندن از اکسل (دو ستون: نام دانش‌آموز، نمره/تراز) — اختیاری</label><textarea id="xpaste" rows="2" placeholder="علی رضایی&#9;6520"></textarea></div><button class="btn" id="xpb">پر کردن جدول از متن</button></div>
    <div class="mu" style="margin-bottom:8px">نمره را فقط برای دانش‌آموزانی که شرکت کرده‌اند بنویسید؛ خالی = شرکت نکرده (در میانگین صفر حساب نمی‌شود). در هر خانه عدد را بنویسید و Enter بزنید تا به ردیف بعدی بروید؛ Enter روی آخرین ردیف، آزمون را ذخیره می‌کند.</div>
    <div class="tw" style="max-height:55vh"><table><thead><tr><th>نام</th><th>کلاس</th><th>نمره</th></tr></thead><tbody>
-   ${st.map(s=>'<tr data-id="'+s.id+'"><td>'+esc(s.name)+'</td><td>'+esc(s.cls)+'</td><td><input type="number" step="0.01" class="sc" value="'+(e&&e.scores[s.id]!=null?e.scores[s.id]:'')+'"></td></tr>').join('')}</tbody></table></div>
+   ${st.map(s=>'<tr data-id="'+s.id+'"><td>'+esc(s.name)+'</td><td>'+esc(s.cls)+'</td><td><input type="number" step="any" class="sc" value="'+(e&&e.scores[s.id]!=null?e.scores[s.id]:'')+'"></td></tr>').join('')}</tbody></table></div>
    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="xsv">ذخیره آزمون</button>${e?'<button class="btn" id="xc">انصراف</button>':''}</div></div>
    <div class="card"><h3>آزمون‌های ثبت‌شده</h3><div class="tw"><table><thead><tr><th>تاریخ</th><th>عنوان</th><th>نوع</th><th>شرکت‌کنندگان</th><th></th></tr></thead><tbody>
-   ${[...S.exams].sort((a,b)=>a.date<b.date?1:-1).slice(0,40).map(x=>'<tr><td>'+jdate(x.date)+'</td><td>'+esc(x.title)+'</td><td>'+(x.type==='general'?'عمومی':'تخصصی')+'</td><td>'+Object.keys(x.scores).length+'</td><td><button class="btn" onclick="EDITEXAM=\''+x.id+'\';entExam()">ویرایش</button> <button class="btn d" onclick="delExam(\''+x.id+'\')">حذف</button></td></tr>').join('')||'<tr><td colspan="5" class="mu">هنوز آزمونی ثبت نشده.</td></tr>'}</tbody></table></div></div>`;
+   ${[...S.exams].sort((a,b)=>a.date<b.date?1:-1).slice(0,40).map(x=>'<tr><td>'+jdate(x.date)+'</td><td>'+esc(x.title)+'</td><td>'+(x.type==='general'?'عمومی':x.type==='taraz'?'تراز گزینه ۲':'تخصصی')+'</td><td>'+Object.keys(x.scores).length+'</td><td><button class="btn" onclick="EDITEXAM=\''+x.id+'\';entExam()">ویرایش</button> <button class="btn d" onclick="delExam(\''+x.id+'\')">حذف</button></td></tr>').join('')||'<tr><td colspan="5" class="mu">هنوز آزمونی ثبت نشده.</td></tr>'}</tbody></table></div></div>`;
   if($('xc'))$('xc').onclick=()=>{EDITEXAM=null;entExam();};
+  const syncTz=()=>{const tz=$('xy').value==='taraz';if(tz){if(+$('xm').value<1000)$('xm').value=10000;$('xm').disabled=true;}else{$('xm').disabled=false;if(+$('xm').value===10000)$('xm').value=20;}};
+  $('xy').onchange=syncTz;syncTz();
+  $('xpb').onclick=()=>{
+    const lines=$('xpaste').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);let ok=0;const miss=[];
+    lines.forEach(l=>{let pr=l.split('\t');if(pr.length<2)pr=l.split(',');if(pr.length<2)pr=l.split(/\s{2,}/);
+      const nm=(pr[0]||'').trim(),val=normDigits((pr.slice(1).join(' ')||'').trim()).replace(/[٬,]/g,'');
+      if(!nm)return;const m=matchStudentByName(nm),n=parseFloat(val);
+      if(!m.sid||isNaN(n)){miss.push(nm);return;}
+      const el=document.querySelector('#ent tr[data-id="'+m.sid+'"] .sc');if(el){el.value=n;ok++;}else miss.push(nm);});
+    toast(fa2(ok)+' ردیف پر شد'+(miss.length?' — یافت‌نشده/نامعتبر: '+miss.slice(0,5).join('، ')+(miss.length>5?'…':''):' ✓'));
+  };
   wireJalali('xd');
   document.querySelectorAll('#ent tbody tr[data-id] .sc').forEach(el=>{
     el.addEventListener('keydown',ev=>{
@@ -780,7 +882,7 @@ function entExam(){
   });
   { const firstSc=document.querySelector('#ent tbody tr[data-id] .sc'); if(firstSc) firstSc.focus(); }
   $('xsv').onclick=async()=>{
-    const d=isoOf('xd'),t=$('xt').value.trim(),tot=+$('xm').value,sc={},errs=[];
+    const d=isoOf('xd'),t=$('xt').value.trim(),tot=$('xy').value==='taraz'?10000:+$('xm').value,sc={},errs=[];
     if(!d||!t){toast('تاریخ و عنوان لازم است');return;}
     if(!(tot>0)){toast('نمره کل نامعتبر است');return;}
     document.querySelectorAll('#ent tr[data-id]').forEach(tr=>{const v=tr.querySelector('.sc').value;if(v==='')return;const n=+v;
@@ -808,7 +910,7 @@ function fieldSummary(iso,sid){
   if(r.s!=null)p.push('کیفیت مطالعه: '+r.s+'⭐');
   if(r.lg===1)p.push('دفتر مطالعه: ثبت شد'); else if(r.lg===0)p.push('دفتر مطالعه: ثبت نشد');
   if(r.hw===1)p.push('تکلیف: انجام داد'); else if(r.hw===0)p.push('تکلیف: انجام نداد');
-  if(r.ex)p.push('اخراج: '+r.ex+' بار');
+  if(r.ex)p.push('⚠️ اخراج از کلاس (منفی): '+r.ex+' بار');
   return p;
 }
 function fieldCount(iso,sid){

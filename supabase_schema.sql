@@ -58,7 +58,7 @@ create table if not exists exams (
   id uuid primary key default gen_random_uuid(),
   date date not null,
   title text,
-  type text check (type in ('general','specialized')),
+  type text check (type in ('general','specialized','taraz')),
   subject text,
   total numeric default 100,
   created_at timestamptz default now()

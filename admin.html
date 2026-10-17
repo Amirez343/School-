@@ -120,10 +120,21 @@ function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';cle
 function uid(){return (crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now().toString(36)+Math.random().toString(36).slice(2,10));}
 
 const CLASSES=["ریاضی 1","ریاضی 2","انسانی"];
-const COMP={morning:"آزمون صبحگاهی",weekly:"آزمون تشریحی",study:"ساعت مطالعه",logging:"ثبت مطالعه",quality:"کیفیت مطالعه",classroom:"عملکرد کلاسی"};
-const DEF_CFG={weights:{morning:15,weekly:20,study:20,logging:10,quality:15,classroom:20},goal:2,goalByClass:{},thresholds:{excellent:85,good:70,attention:55},drop:10,penalty:5,
+const COMP={morning:"آزمون صبحگاهی",weekly:"آزمون تشریحی",taraz:"تراز آزمون گزینه ۲",study:"ساعت مطالعه",logging:"ثبت مطالعه",quality:"کیفیت مطالعه",classroom:"انضباط و تکالیف کلاسی"};
+const DEF_CFG={weights:{morning:15,weekly:15,taraz:10,study:20,logging:10,quality:15,classroom:15},tarazMin:3000,tarazMax:9000,defaults:{q:'',h:'',s:'',lg:'',hw:1,ex:''},goal:2,goalByClass:{},thresholds:{excellent:85,good:70,attention:55},drop:10,penalty:5,
   cardMsg:{e:{t:'',s:''},g:{t:'',s:''},a:{t:'',s:''},f:{t:'',s:''},u:{t:'',s:''}}};
 
+function mergeCfg(saved){
+  saved=saved||{};const c=Object.assign({},DEF_CFG,saved);
+  c.weights=Object.assign({},DEF_CFG.weights,saved.weights||{});
+  c.defaults=Object.assign({},DEF_CFG.defaults,saved.defaults||{});
+  c.thresholds=Object.assign({},DEF_CFG.thresholds,saved.thresholds||{});
+  c.cardMsg=Object.assign({},DEF_CFG.cardMsg,saved.cardMsg||{});
+  return c;
+}
+function parseHM(raw){const t=String(raw||'').trim().replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));if(t==='')return null;
+  if(!/^\d{1,2}(\.\d{1,2})?$/.test(t))return{invalid:true};const a=t.split('.'),h=+a[0],m=a[1]!=null?+a[1]:0;
+  if(h>24||m>59)return{invalid:true};return{value:h+m/60};}
 let GROUPS=[],STAFF=[],ASSIGN=[],STUDENTS=[],CFG=null;
 const STAFF_DOMAIN='@staff.local'; // ایمیل داخلی و نامرئی؛ مسئولین فقط نام‌کاربری وارد می‌کنند
 function usernameToEmail(u){return u.trim().toLowerCase().replace(/\s+/g,'')+STAFF_DOMAIN;}
@@ -166,7 +177,7 @@ async function loadAll(){
   STAFF=(pq.data||[]).filter(p=>p.role!=='admin');
   ASSIGN=aq.data||[];
   STUDENTS=sq.data||[];
-  CFG=Object.assign({},DEF_CFG,(cq.data&&cq.data.data)||{});
+  CFG=mergeCfg(cq.data&&cq.data.data);
 }
 function groupsOf(staffId){return ASSIGN.filter(a=>a.staff_id===staffId).map(a=>GROUPS.find(g=>g.id===a.group_id)).filter(Boolean);}
 function studentsOfGroup(gid){return STUDENTS.filter(s=>s.group_id===gid);}
@@ -213,6 +224,18 @@ function render(){
    <div><label>حداقل «عالی»</label><input type="number" id="t1" value="${c.thresholds.excellent}"></div><div><label>حداقل «خوب»</label><input type="number" id="t2" value="${c.thresholds.good}"></div><div><label>حداقل «نیاز به توجه»</label><input type="number" id="t3" value="${c.thresholds.attention}"></div>
    <div><label>افت قابل‌توجه (امتیاز)</label><input type="number" id="dr" value="${c.drop}"></div></div>
    <div class="g4" style="margin-top:10px"><div><label>جریمه هر اخراج (امتیاز)</label><input type="number" id="pn" value="${c.penalty}"></div></div>
+   <h3 style="margin-top:16px">تبدیل تراز آزمون گزینه ۲ به نمره‌ی ۰ تا ۱۰۰</h3>
+   <div class="g4"><div><label>ترازی که معادل ۰ است</label><input type="number" id="tzmin" value="${c.tarazMin}"></div><div><label>ترازی که معادل ۱۰۰ است</label><input type="number" id="tzmax" value="${c.tarazMax}"></div></div>
+   <p class="mu">میانگین تراز دانش‌آموز در ماه به‌صورت خطی بین این دو عدد به نمره‌ی ۰ تا ۱۰۰ تبدیل می‌شود و با وزن «تراز آزمون گزینه ۲» در امتیاز کلی اثر می‌گذارد.</p>
+   <h3 style="margin-top:16px">مقدار پیش‌فرض خانه‌های «ثبت روزانه» (در ردیف‌های بدون ثبت قبلی از پیش پر می‌شود؛ خالی = بدون پیش‌فرض)</h3>
+   <div class="g4">
+    <div><label>آزمون صبحگاهی ٪</label><input type="number" id="df_q" value="${c.defaults.q}"></div>
+    <div><label>ساعت مطالعه (مثلاً 1.30)</label><input id="df_h" value="${esc(c.defaults.h)}"></div>
+    <div><label>ستاره کیفیت</label><select id="df_s">${[['','— بدون پیش‌فرض —'],[0,'0'],[1,'1'],[2,'2'],[3,'3']].map(([k,l])=>'<option value="'+k+'"'+(String(c.defaults.s)===String(k)?' selected':'')+'>'+l+'</option>').join('')}</select></div>
+    <div><label>دفتر مطالعه</label><select id="df_lg">${[['','— بدون پیش‌فرض —'],[1,'ثبت شد'],[0,'ثبت نشد']].map(([k,l])=>'<option value="'+k+'"'+(String(c.defaults.lg)===String(k)?' selected':'')+'>'+l+'</option>').join('')}</select></div>
+    <div><label>تکلیف</label><select id="df_hw">${[['','— بدون پیش‌فرض —'],[1,'انجام داد'],[0,'انجام نداد']].map(([k,l])=>'<option value="'+k+'"'+(String(c.defaults.hw)===String(k)?' selected':'')+'>'+l+'</option>').join('')}</select></div>
+    <div><label>اخراج از کلاس (منفی)</label><input type="number" min="0" id="df_ex" value="${c.defaults.ex}"></div>
+   </div>
    <h3 style="margin-top:16px">پیام‌های کارنامه‌ی دانش‌آموز (دلخواه — می‌توانید خالی بگذارید)</h3>
    ${[['e','عالی'],['g','خوب'],['a','نیاز به توجه'],['f','نیازمند پیگیری'],['u','داده ناکافی']].map(([k,l])=>`<div class="row"><div class="f" style="flex:0 0 110px;align-self:center"><b>${l}</b></div>
      <div class="f"><label>عنوان کوتاه</label><input id="cmt_${k}" value="${esc(c.cardMsg[k].t)}"></div>
@@ -291,7 +314,11 @@ function wireEvents(){
     if(!(t1>t2&&t2>t3)){alert('ترتیب آستانه‌ها باید عالی > خوب > نیاز به توجه باشد.');return;}
     const gb={};CLASSES.forEach((x,i)=>{const v=$('gc'+i).value;if(v!=='')gb[x]=+v;});
     const cardMsg={};['e','g','a','f','u'].forEach(k=>{cardMsg[k]={t:$('cmt_'+k).value.trim(),s:$('cms_'+k).value.trim()};});
-    const cfg=Object.assign({},CFG,{weights:w,goal:+$('gd').value||2,goalByClass:gb,thresholds:{excellent:t1,good:t2,attention:t3},drop:+$('dr').value||10,penalty:+$('pn').value||0,cardMsg});
+    const tzmin=+$('tzmin').value,tzmax=+$('tzmax').value;
+    if(!(tzmax>tzmin)){alert('تراز معادل ۱۰۰ باید بزرگ‌تر از تراز معادل ۰ باشد.');return;}
+    let dh=$('df_h').value.trim();if(dh!==''){const pp=parseHM(dh);if(!pp||pp.invalid){alert('فرمت ساعت پیش‌فرض نامعتبر است (مثال: 1.30).');return;}}
+    const defaults={q:$('df_q').value.trim(),h:dh,s:$('df_s').value,lg:$('df_lg').value,hw:$('df_hw').value,ex:$('df_ex').value.trim()};
+    const cfg=Object.assign({},CFG,{tarazMin:tzmin,tarazMax:tzmax,defaults,weights:w,goal:+$('gd').value||2,goalByClass:gb,thresholds:{excellent:t1,good:t2,attention:t3},drop:+$('dr').value||10,penalty:+$('pn').value||0,cardMsg});
     $('svc').disabled=true;
     const {error}=await sb.from('cfg').update({data:cfg}).eq('id',1);
     $('svc').disabled=false;
