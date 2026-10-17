@@ -13,6 +13,8 @@
   --br:#2d3f8f;--br2:#202d68;--brs:#e9ecfa;--brs2:#dce1f6;
   --ok:#178a53;--oks:#e3f6ea;--wa:#b9790a;--was:#fdf0da;--bad:#c8372f;--bads:#fbe6e4;
   --gold:#a6760d;
+  --glass:rgba(255,255,255,.55);--glass-strong:rgba(255,255,255,.72);--glass-bd:rgba(255,255,255,.75);
+  --glass-sh:0 8px 32px rgba(40,50,110,.14),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.35);
   --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:26px;
   --sh1:0 1px 2px rgba(20,26,50,.05);
   --sh2:0 1px 2px rgba(20,26,50,.04),0 10px 24px -14px rgba(20,26,50,.18);
@@ -76,6 +78,30 @@ details{margin-bottom:12px}summary{cursor:pointer;font-weight:700;padding:10px 0
 @media print{header,.noprint,.warn{display:none!important}.mbg{position:static;background:none}.modal{max-height:none;box-shadow:none;animation:none}body{background:#fff}
 body:has(#cardOv) main{display:none!important}
 #cardOv{position:static!important;background:none!important;padding:0!important}}
+
+/* ===== Liquid glass ===== */
+body{background:#e9ecf8;background-image:radial-gradient(60vmax 50vmax at 85% -10%,rgba(99,120,255,.38),transparent 60%),radial-gradient(55vmax 45vmax at 5% 15%,rgba(255,150,200,.30),transparent 60%),radial-gradient(60vmax 50vmax at 60% 110%,rgba(80,210,230,.32),transparent 60%);background-attachment:fixed;min-height:100vh}
+header{background:var(--glass);backdrop-filter:blur(26px) saturate(190%);-webkit-backdrop-filter:blur(26px) saturate(190%);border-bottom:1px solid var(--glass-bd);box-shadow:0 4px 24px rgba(40,50,110,.10),inset 0 -1px 0 rgba(255,255,255,.6)}
+.card,.modal{background:var(--glass);backdrop-filter:blur(24px) saturate(190%);-webkit-backdrop-filter:blur(24px) saturate(190%);border:1px solid var(--glass-bd);box-shadow:var(--glass-sh)}
+.modal{background:var(--glass-strong)}
+.card{position:relative}
+.card::before,.modal::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.55),rgba(255,255,255,0) 38%,rgba(255,255,255,0) 70%,rgba(255,255,255,.25));mix-blend-mode:soft-light}
+.modal{position:relative}
+.stat{border-right:4px solid var(--br)}
+.tabbar{background:rgba(255,255,255,.4);border:1px solid var(--glass-bd);box-shadow:inset 0 1px 2px rgba(40,50,110,.08)}
+.tab.on{background:rgba(255,255,255,.9);box-shadow:0 2px 8px rgba(40,50,110,.18),inset 0 1px 0 #fff}
+.btn{background:rgba(255,255,255,.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--glass-bd);box-shadow:0 1px 4px rgba(40,50,110,.08),inset 0 1px 0 rgba(255,255,255,.9)}
+.btn.p{background:linear-gradient(180deg,#4558b8,var(--br));border-color:rgba(255,255,255,.35);box-shadow:0 4px 14px rgba(45,63,143,.4),inset 0 1px 0 rgba(255,255,255,.35)}
+.btn.d{background:rgba(251,230,228,.75)}
+input,select,textarea{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.8);box-shadow:inset 0 1px 3px rgba(40,50,110,.10)}
+input:focus,select:focus,textarea:focus{background:rgba(255,255,255,.9)}
+th{background:transparent;backdrop-filter:none}
+tbody tr:hover{background:rgba(255,255,255,.5)}
+#toast{background:rgba(23,25,42,.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.2)}
+.mbg{background:rgba(30,36,80,.28);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.jdcell{background:rgba(255,255,255,.6)}
+@supports not (backdrop-filter:blur(1px)){.card,.modal,header{background:rgba(255,255,255,.95)}}
+@media print{body{background:#fff!important}.card,.modal{backdrop-filter:none;box-shadow:none}.card::before,.modal::before{display:none}}
 </style>
 </head>
 <body>
@@ -348,7 +374,7 @@ function compute(sid,m){
   const hw=recs.filter(r=>r.hw===0||r.hw===1);
   const hwRate=hw.length?avg(hw.map(r=>r.hw))*100:null;
   const exp=sum(recs.map(r=>r.ex||0));
-  const hasCls=hw.length||recs.some(r=>r.ex!=null);
+  const hasCls=hw.length||exp>0; // «۰ اخراج» ثبت‌شده با خالی‌گذاشتن یکسان است و امتیاز اضافه نمی‌دهد
   const classroom=hwRate!=null?Math.max(0,hwRate-exp*cfg.penalty):(hasCls?Math.max(0,100-exp*cfg.penalty):null);
   const comps={morning,weekly,study,logging,quality,classroom};
   const av=Object.entries(comps).filter(([k,v])=>v!=null);
@@ -564,7 +590,7 @@ function vDash(){
   <div class="card"><h3>روند ۶ ماه اخیر مدرسه</h3>${line(tr.ms.map(m=>JM[+m.split('-')[1]-1]),tr.vals)}</div>
   <div class="card"><h3>وضعیت دانش‌آموزان <span class="mu">(برای گزارش فردی روی نام کلیک کنید — ترتیب الفبایی است)</span></h3>
   <div class="tw"><table><thead><tr><th>نام</th><th>کلاس</th><th>امتیاز</th><th>وضعیت</th><th>تغییر</th><th>داده</th><th>نقاط ضعف</th></tr></thead><tbody>
-  ${st.map((s,i)=>{const r=rs[i],p=compute(s.id,addM(MON,-1));return '<tr><td><a href="#" onclick="stReport(\''+s.id+'\');return false">'+esc(s.name)+'</a></td><td>'+esc(s.cls)+'</td><td>'+F(r.overall)+'</td><td>'+badge(r.overall)+'</td><td>'+(r.overall!=null&&p.overall!=null?(r.overall-p.overall>=0?'+':'')+r1(r.overall-p.overall):'—')+'</td><td>'+r.completeness+'٪</td><td class="mu" style="white-space:normal">'+esc(weak(r).join('، ')||'—')+'</td></tr>';}).join('')}
+  ${st.map((s,i)=>({s,r:rs[i]})).sort((a,b)=>(b.r.overall==null)-(a.r.overall==null)||(b.r.overall||0)-(a.r.overall||0)||a.s.name.localeCompare(b.s.name,'fa')).map(({s,r})=>{const p=compute(s.id,addM(MON,-1));return '<tr><td><a href="#" onclick="stReport(\''+s.id+'\');return false">'+esc(s.name)+'</a></td><td>'+esc(s.cls)+'</td><td>'+F(r.overall)+'</td><td>'+badge(r.overall)+'</td><td>'+(r.overall!=null&&p.overall!=null?(r.overall-p.overall>=0?'+':'')+r1(r.overall-p.overall):'—')+'</td><td>'+r.completeness+'٪</td><td class="mu" style="white-space:normal">'+esc(weak(r).join('، ')||'—')+'</td></tr>';}).join('')}
   </tbody></table></div></div>`;
   $('dm').onchange=e=>{MON=e.target.value;vDash();};$('dc').onchange=e=>{DASHCLS=e.target.value;vDash();};
 }
