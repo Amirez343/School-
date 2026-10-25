@@ -5,111 +5,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>سامانه عملکرد تحصیلی مدرسه</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap');
-:root{
-  --bg:#eef0f5;--card:#fff;--card2:#f6f7fb;--bd:rgba(28,36,64,.09);--bd2:rgba(28,36,64,.14);
-  --tx:#161b2e;--tx2:#454c62;--mu:#878e9f;
-  --br:#2d3f8f;--br2:#202d68;--brs:#e9ecfa;--brs2:#dce1f6;
-  --ok:#178a53;--oks:#e3f6ea;--wa:#b9790a;--was:#fdf0da;--bad:#c8372f;--bads:#fbe6e4;
-  --gold:#a6760d;
-  --glass:rgba(255,255,255,.55);--glass-strong:rgba(255,255,255,.72);--glass-bd:rgba(255,255,255,.75);
-  --glass-sh:0 8px 32px rgba(40,50,110,.14),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.35);
-  --r-sm:10px;--r-md:14px;--r-lg:20px;--r-xl:26px;
-  --sh1:0 1px 2px rgba(20,26,50,.05);
-  --sh2:0 1px 2px rgba(20,26,50,.04),0 10px 24px -14px rgba(20,26,50,.18);
-  --sh3:0 24px 70px -12px rgba(10,14,34,.35),0 4px 16px rgba(10,14,34,.1);
-}
-*{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--tx);font-family:Vazirmatn,-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,sans-serif;font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-::selection{background:var(--brs2)}
-header{background:rgba(255,255,255,.82);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:10px;padding:10px 18px;flex-wrap:wrap}
-header b{color:var(--tx);font-weight:800;font-size:15px;letter-spacing:-.2px;display:flex;align-items:center;gap:6px}
-.tabbar{display:flex;gap:2px;background:var(--card2);padding:3px;border-radius:var(--r-md);border:1px solid var(--bd)}
-.tab{border:0;background:transparent;padding:7px 15px;border-radius:9px;cursor:pointer;font:inherit;font-size:13.5px;color:var(--tx2);font-weight:600;transition:background .18s ease,color .18s ease,box-shadow .18s ease}
-.tab:hover{color:var(--tx)}
-.tab.on{background:#fff;color:var(--br);box-shadow:0 1px 1px rgba(20,26,50,.06),0 1px 3px rgba(20,26,50,.1)}
-main{max-width:1150px;margin:0 auto;padding:20px 14px 70px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r-lg);padding:18px;margin-bottom:14px;box-shadow:var(--sh2)}
-.grid{display:grid;gap:10px}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
-@media(max-width:800px){.g4,.g3{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
-.stat{border-right:4px solid var(--br);border-radius:var(--r-lg)}
-.stat .l{color:var(--mu);font-size:12px;font-weight:600}.stat .v{font-size:25px;font-weight:800;margin-top:5px;letter-spacing:-.3px}
-h3{margin:0 0 10px;font-size:15px;font-weight:700;letter-spacing:-.1px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:8px 9px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
-th{color:var(--mu);font-size:11.5px;font-weight:700;background:var(--card);position:sticky;top:0;z-index:2}
-tbody tr{transition:background .12s}
-tbody tr:hover{background:var(--card2)}
-.tw{overflow-x:auto}
-input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--bd2);border-radius:var(--r-sm);background:var(--card2);color:var(--tx);width:100%;transition:border-color .15s,box-shadow .15s,background .15s}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--br);background:#fff;box-shadow:0 0 0 3.5px var(--brs2)}
-td input,td select{padding:5px 7px;min-width:58px;background:#fff}
-input[type=checkbox]{width:auto}
-label{display:block;font-size:12px;color:var(--mu);margin-bottom:4px;font-weight:600}
-.f{flex:1;min-width:130px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
-.btn{padding:8px 15px;border-radius:var(--r-sm);border:1px solid var(--bd2);background:#fff;cursor:pointer;font:inherit;font-weight:600;font-size:13.5px;color:var(--tx2);transition:transform .08s ease,background .15s,color .15s,border-color .15s}
-.btn:hover{border-color:var(--br);color:var(--br)}
-.btn:active{transform:scale(.96)}
-.btn.p{background:var(--br);color:#fff;border-color:var(--br)}.btn.p:hover{background:var(--br2);color:#fff}
-.btn.d{background:var(--bads);color:var(--bad);border-color:transparent}.btn.d:hover{background:var(--bad);color:#fff}
-.btn.small{padding:5px 10px;font-size:12px;border-radius:8px}
-.btn:disabled{opacity:.5;cursor:default;transform:none}
-.b{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:700}
-.b.e{background:var(--oks);color:var(--ok)}.b.g{background:var(--brs);color:var(--br)}.b.a{background:var(--was);color:var(--wa)}.b.f{background:var(--bads);color:var(--bad)}.b.u{background:var(--card2);color:var(--mu)}
-.mu{color:var(--mu);font-size:12px}
-.bar{height:8px;background:var(--card2);border-radius:5px;overflow:hidden}.bar>div{height:100%;background:var(--br);border-radius:5px;transition:width .3s ease}
-.warn{background:var(--was);border:1px solid #efd9a0;color:#7a5200;padding:11px 14px;border-radius:var(--r-md);margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.mbg{position:fixed;inset:0;background:rgba(12,16,32,.5);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:50;padding:12px;animation:fadeIn .15s ease}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes sheetIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
-.modal{background:#fff;border-radius:var(--r-xl);padding:20px;width:100%;max-width:560px;max-height:90vh;overflow:auto;box-shadow:var(--sh3);animation:sheetIn .18s cubic-bezier(.2,.8,.2,1)}
-input.jdate{cursor:pointer;background:#fff;text-align:center;font-weight:700;color:var(--br)}
-.jdcell{padding:8px 0;border:1px solid transparent;border-radius:var(--r-sm);background:var(--card2);cursor:pointer;font:inherit;font-weight:600;color:var(--tx2);transition:background .12s}
-.jdcell:hover{background:var(--brs)}
-.jdcell.jtoday{border-color:var(--br);color:var(--br)}
-.jdcell.jsel{background:var(--br);color:#fff}
-.jgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#17192a;color:#fff;padding:10px 20px;border-radius:99px;z-index:99;display:none;box-shadow:0 10px 30px rgba(0,0,0,.25);font-weight:600;font-size:13px}
-ul.r{margin:6px 0;padding-right:18px;line-height:1.9}
-.sub{display:flex;gap:6px;margin-bottom:10px}
-details{margin-bottom:12px}summary{cursor:pointer;font-weight:700;padding:10px 0}
-@media print{header,.noprint,.warn{display:none!important}.mbg{position:static;background:none}.modal{max-height:none;box-shadow:none;animation:none}body{background:#fff}
-body:has(#cardOv) main{display:none!important}
-#cardOv{position:static!important;background:none!important;padding:0!important}}
-
-/* ===== Liquid glass ===== */
-body{background:#e9ecf8;background-image:radial-gradient(60vmax 50vmax at 85% -10%,rgba(99,120,255,.38),transparent 60%),radial-gradient(55vmax 45vmax at 5% 15%,rgba(255,150,200,.30),transparent 60%),radial-gradient(60vmax 50vmax at 60% 110%,rgba(80,210,230,.32),transparent 60%);background-attachment:fixed;min-height:100vh}
-header{background:var(--glass);backdrop-filter:blur(26px) saturate(190%);-webkit-backdrop-filter:blur(26px) saturate(190%);border-bottom:1px solid var(--glass-bd);box-shadow:0 4px 24px rgba(40,50,110,.10),inset 0 -1px 0 rgba(255,255,255,.6)}
-.card,.modal{background:var(--glass);backdrop-filter:blur(24px) saturate(190%);-webkit-backdrop-filter:blur(24px) saturate(190%);border:1px solid var(--glass-bd);box-shadow:var(--glass-sh)}
-.modal{background:var(--glass-strong)}
-.card{position:relative}
-.card::before,.modal::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.55),rgba(255,255,255,0) 38%,rgba(255,255,255,0) 70%,rgba(255,255,255,.25));mix-blend-mode:soft-light}
-.modal{position:relative}
-.stat{border-right:4px solid var(--br)}
-.tabbar{background:rgba(255,255,255,.4);border:1px solid var(--glass-bd);box-shadow:inset 0 1px 2px rgba(40,50,110,.08)}
-.tab.on{background:rgba(255,255,255,.9);box-shadow:0 2px 8px rgba(40,50,110,.18),inset 0 1px 0 #fff}
-.btn{background:rgba(255,255,255,.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--glass-bd);box-shadow:0 1px 4px rgba(40,50,110,.08),inset 0 1px 0 rgba(255,255,255,.9)}
-.btn.p{background:linear-gradient(180deg,#4558b8,var(--br));border-color:rgba(255,255,255,.35);box-shadow:0 4px 14px rgba(45,63,143,.4),inset 0 1px 0 rgba(255,255,255,.35)}
-.btn.d{background:rgba(251,230,228,.75)}
-input,select,textarea{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.8);box-shadow:inset 0 1px 3px rgba(40,50,110,.10)}
-input:focus,select:focus,textarea:focus{background:rgba(255,255,255,.9)}
-th{background:transparent;backdrop-filter:none}
-tbody tr:hover{background:rgba(255,255,255,.5)}
-#toast{background:rgba(23,25,42,.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.2)}
-.mbg{background:rgba(30,36,80,.28);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-.jdcell{background:rgba(255,255,255,.6)}
-td input.ex{border-color:rgba(200,55,47,.5)!important;background:rgba(251,230,228,.55)!important}
-th.neg{color:var(--bad)}
-@supports not (backdrop-filter:blur(1px)){.card,.modal,header{background:rgba(255,255,255,.95)}}
-@media print{body{background:#fff!important}.card,.modal{backdrop-filter:none;box-shadow:none}.card::before,.modal::before{display:none}}
-</style>
+<script>try{var _t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',_t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 <header class="noprint">
-  <b>🎓 عملکرد تحصیلی</b>
-  <span class="mu" style="font-size:11px">سازنده: امیرمحمد عزت‌پور — ۰۹۹۳۴۲۹۶۱۹۱</span>
+  <b><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M5 19v-6M12 19V6M19 19v-9"/></svg></span><span class="gtxt">عملکرد تحصیلی</span></b>
+  <span class="mu hdr-credit" style="font-size:11px">سازنده: امیرمحمد عزت‌پور — ۰۹۹۳۴۲۹۶۱۹۱</span>
   <div class="tabbar">
     <button class="tab" data-t="dash">داشبورد و گزارش</button>
     <button class="tab" data-t="entry">ثبت داده</button>
@@ -117,16 +23,18 @@ th.neg{color:var(--bad)}
     <button class="tab" data-t="manage">مدیریت</button>
   </div>
   <span style="flex:1"></span>
+  <button class="btn small noprint" id="themeBtn" type="button" aria-label="تغییر تم روشن یا تیره" title="تغییر تم"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
   <span class="mu" id="whoami"></span>
   <button class="btn small" id="logoutBtn" style="display:none">خروج</button>
   <span class="mu" id="saved"></span>
 </header>
 <main><div id="banner"></div><div id="view"></div></main>
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<button class="fab noprint" id="fab" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>ذخیره</button>
 
 <div id="loginGate" class="mbg" style="display:none;z-index:200">
   <div class="modal" style="max-width:360px">
-    <h3 style="text-align:center">🎓 ورود به سامانه</h3>
+    <h3 style="text-align:center;justify-content:center"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M5 19v-6M12 19V6M19 19v-9"/></svg></span><span class="gtxt">ورود به سامانه</span></h3>
     <div id="loginErr" class="mu" style="color:var(--bad);display:none;margin-bottom:8px"></div>
     <div class="row"><div class="f"><label>نام‌کاربری</label><input id="loE" type="text" autocomplete="username"></div></div>
     <div class="row"><div class="f"><label>رمز عبور</label><input id="loP" type="password" autocomplete="current-password"></div></div>
@@ -134,8 +42,9 @@ th.neg{color:var(--bad)}
     <p class="mu" style="margin-top:10px;text-align:center">این سامانه کاملاً ابری است و بدون اتصال اینترنت و ورود معتبر قابل استفاده نیست.</p>
   </div>
 </div>
-<div id="loadingGate" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:150;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--mu)">در حال بارگذاری اطلاعات…</div>
+<div id="loadingGate" class="gate" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:150;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--mu)"><div class="spin"></div><div>در حال بارگذاری اطلاعات…</div></div>
 
+<script src="fx.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -173,7 +82,7 @@ function newState(){return {v:1,students:[],groups:[],days:{},exams:[],actions:[
 function markSaved(ok){
   CACHE={};MONTHS=null;
   const el=document.getElementById('saved');
-  if(el)el.textContent=ok?('✓ ذخیره شد '+new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})):'⚠️ خطا در ذخیره';
+  if(el){el.className='mu';void el.offsetWidth;el.className='mu pop '+(ok?'ok-t':'bad-t');el.textContent=ok?('✓ ذخیره شد '+new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})):'⚠️ خطا در ذخیره';}
 }
 function netErr(e){console.error(e);toast('⚠️ خطا در ارتباط با سرور — تغییرات ذخیره نشد. اتصال اینترنت را بررسی کنید.');markSaved(false);}
 
@@ -560,24 +469,25 @@ function importMorningModal(date,cls){
 /* ================= UI ================= */
 let TAB='dash',MON=null,SUBENTRY='daily',DASHCLS='',EDITEXAM=null,OVMON=null,OVCLS='',OVSID='';
 const $=id=>document.getElementById(id);
-function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.display='none',2400);}
+function toast(t){const e=$('toast');e.textContent=t;e.className=/^⚠|خطا/.test(t)?'err':/✓/.test(t)?'ok':'';e.style.animation='none';void e.offsetWidth;e.style.animation='';e.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.display='none',2400);}
 function monthSel(id){return monthSelFor(id,MON);}
 function monthSelFor(id,value){return '<div class="f" style="max-width:200px"><label>ماه (شمسی)</label><select id="'+id+'">'+monthList().map(m=>'<option value="'+m+'"'+(m===value?' selected':'')+'>'+mlabel(m)+'</option>').join('')+'</select></div>';}
 function badge(o){const c=classify(o);return '<span class="b '+c.c+'">'+c.l+'</span>';}
-function line(labels,vals){
+function line(labels,vals,c){
+  if(!c){const cs=getComputedStyle(document.documentElement),g=k=>cs.getPropertyValue(k).trim();c={grid:g('--bd2')||'#e3e7ee',mu:g('--mu')||'#6b7684',tx:g('--tx')||'#1c2430',br:g('--br')||'#2f5fd8'};}
   const W=520,H=170,P=28,n=labels.length,xs=i=>P+i*(W-2*P)/Math.max(1,n-1),ys=v=>H-P-(v/100)*(H-2*P);
   let pts=vals.map((v,i)=>v==null?null:[xs(i),ys(v)]);
   let g='',path='',pen=false;
-  [0,50,100].forEach(v=>g+='<line x1="'+P+'" x2="'+(W-P)+'" y1="'+ys(v)+'" y2="'+ys(v)+'" stroke="#e3e7ee"/><text x="4" y="'+(ys(v)+4)+'" font-size="10" fill="#6b7684">'+v+'</text>');
+  [0,50,100].forEach(v=>g+='<line x1="'+P+'" x2="'+(W-P)+'" y1="'+ys(v)+'" y2="'+ys(v)+'" stroke="'+c.grid+'"/><text x="4" y="'+(ys(v)+4)+'" font-size="10" fill="'+c.mu+'">'+v+'</text>');
   pts.forEach(p=>{if(!p){pen=false;return;}path+=(pen?'L':'M')+p[0]+' '+p[1]+' ';pen=true;});
-  const dots=pts.map((p,i)=>p?'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3.5" fill="#2f5fd8"/><text x="'+p[0]+'" y="'+(p[1]-8)+'" font-size="10" text-anchor="middle" fill="#1c2430">'+r1(vals[i])+'</text>':'').join('');
-  const lb=labels.map((l,i)=>'<text x="'+xs(i)+'" y="'+(H-8)+'" font-size="10" text-anchor="middle" fill="#6b7684">'+esc(l)+'</text>').join('');
-  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'<path d="'+path+'" fill="none" stroke="#2f5fd8" stroke-width="2"/>'+dots+lb+'</svg>';
+  const dots=pts.map((p,i)=>p?'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3.5" fill="'+c.br+'"/><text x="'+p[0]+'" y="'+(p[1]-8)+'" font-size="10" text-anchor="middle" fill="'+c.tx+'">'+r1(vals[i])+'</text>':'').join('');
+  const lb=labels.map((l,i)=>'<text x="'+xs(i)+'" y="'+(H-8)+'" font-size="10" text-anchor="middle" fill="'+c.mu+'">'+esc(l)+'</text>').join('');
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'<path class="ln" pathLength="1" d="'+path+'" fill="none" stroke="'+c.br+'" stroke-width="2"/>'+dots+lb+'</svg>';
 }
 function trend(sid,m){const ms=[];for(let i=5;i>=0;i--)ms.push(addM(m,-i));return {ms,vals:ms.map(x=>sid?compute(sid,x).overall:schoolAvg(x))};}
 function schoolAvg(m){return avg(active().map(s=>compute(s.id,m).overall).filter(v=>v!=null));}
 
-function show(t){TAB=t;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));banner();({dash:vDash,entry:vEntry,follow:vFollow,manage:vManage})[t]();window.scrollTo(0,0);}
+function show(t){TAB=t;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));banner();({dash:vDash,entry:vEntry,follow:vFollow,manage:vManage})[t]();window.scrollTo(0,0);if(window.FX){if(t!=='entry')FX.setFab(null);FX.afterShow();}}
 function banner(){ $('banner').innerHTML=''; }
 
 /* ---- داشبورد و گزارش ---- */
@@ -661,7 +571,7 @@ function cardHTML(sid,m){
   const ov=Math.round(c.overall||0),pct=Math.max(0,Math.min(100,c.overall||0)),CIR=2*Math.PI*52;
   const color=c.overall==null?'#c9cfd8':c.overall>=S.cfg.thresholds.excellent?'#1f9d5a':c.overall>=S.cfg.thresholds.good?'#2f5fd8':c.overall>=S.cfg.thresholds.attention?'#e0a72c':'#d6473f';
   const scope=isAdmin()?'مدرسه':'گروه';
-  return `<div style="width:640px;max-width:100%;margin:0 auto;background:#fff;border-radius:22px;padding:26px 24px;box-shadow:0 8px 30px rgba(20,30,60,.12);font-family:inherit;color:#161b2e;direction:rtl">
+  return `<div style="--tx:#161b2e;--mu:#6b7684;--card2:#f1f3fa;--bd:rgba(25,32,80,.09);--bd2:rgba(25,32,80,.16);--br:#3d4fd6;width:640px;max-width:100%;margin:0 auto;background:#fff;border-radius:22px;padding:26px 24px;box-shadow:0 8px 30px rgba(20,30,60,.12);font-family:inherit;color:#161b2e;direction:rtl">
    <div style="text-align:center;margin-bottom:6px"><div style="font-size:13px;color:#6b7684">کارنامه‌ی عملکرد تحصیلی</div>
    <div style="font-size:24px;font-weight:800;margin:4px 0">${esc(s.name)}</div>
    <div style="color:#6b7684">${esc(s.cls)} — ${mlabel(m)}</div></div>
@@ -680,7 +590,7 @@ function cardHTML(sid,m){
    ${c.exp>0?`<div style="background:#fbe6e4;border-radius:12px;padding:10px 14px;margin-bottom:10px;color:#a32a23"><b>⚠️ موارد انضباطی (منفی):</b> ${fa2(c.exp)} بار اخراج از کلاس در این ماه</div>`:''}
    ${strong.length?`<div style="background:#e3f6ea;border-radius:12px;padding:10px 14px;margin-bottom:10px"><b>✅ نقاط قوت این ماه:</b> ${strong.map(k=>COMP[k]).join('، ')}</div>`:''}
    ${tipK?`<div style="background:#fdf0da;border-radius:12px;padding:10px 14px;margin-bottom:10px"><b>💡 پیشنهاد این ماه:</b> ${tipTxt[tipK]}</div>`:''}
-   <div style="margin:12px 0">${line(tr.ms.map(x=>JM[+x.split('-')[1]-1]),tr.vals)}</div>
+   <div style="margin:12px 0">${line(tr.ms.map(x=>JM[+x.split('-')[1]-1]),tr.vals,{grid:'#e3e7ee',mu:'#6b7684',tx:'#1c2430',br:'#3d4fd6'})}</div>
    <div style="display:flex;justify-content:space-between;margin-top:22px;font-size:12px;color:#6b7684">
     <div>امضای معلم: ____________</div><div>امضای ولی: ____________</div><div>تاریخ: ${jdate(todayISO())}</div></div>
    <div style="text-align:center;margin-top:10px;font-size:10px;color:#b8bfca">سامانه عملکرد تحصیلی — طراحی: امیرمحمد عزت‌پور</div>
@@ -744,6 +654,7 @@ async function downloadCards(ids,m,zipName,totalCount){
 function vEntry(){
   $('view').innerHTML='<div class="sub"><button class="btn'+(SUBENTRY==='daily'?' p':'')+'" onclick="SUBENTRY=\'daily\';vEntry()">ثبت روزانه</button><button class="btn'+(SUBENTRY==='exam'?' p':'')+'" onclick="SUBENTRY=\'exam\';vEntry()">آزمون‌ها (تشریحی / تراز)</button><button class="btn'+(SUBENTRY==='overview'?' p':'')+'" onclick="SUBENTRY=\'overview\';vEntry()">🔍 نمای ثبت‌ها</button></div><div id="ent"></div>';
   if(SUBENTRY==='daily')entDaily(todayISO(),'');else if(SUBENTRY==='exam')entExam();else entOverview();
+  if(window.FX)FX.setFab(SUBENTRY==='daily'?()=>$('sv'):SUBENTRY==='exam'?()=>$('xsv'):null);
 }
 function entDaily(date,cls){
   const st=active().filter(s=>!cls||s.cls===cls),day=S.days[date]||{};
@@ -917,7 +828,7 @@ function fieldCount(iso,sid){
   const r=(S.days[iso]||{})[sid]; if(!r)return 0;
   let n=0; if(r.q!=null||r.qa)n++; if(r.h!=null||r.s!=null||r.lg!=null)n++; if(r.hw!=null||r.ex)n++; return n;
 }
-function cellColor(n){return n===0?'#eef0f3':n===1?'#cfe0fb':n===2?'#8fb6f3':'#2f5fd8';}
+function cellColor(n){return n===0?'var(--card2)':n===1?'color-mix(in srgb,var(--br) 30%,transparent)':n===2?'color-mix(in srgb,var(--br) 62%,transparent)':'var(--br)';}
 function entOverview(){
   if(!OVMON)OVMON=monthList()[0];
   const [jy,jm]=OVMON.split('-').map(Number);
