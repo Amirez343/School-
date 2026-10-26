@@ -49,7 +49,7 @@ function uid(){return (crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now(
 
 const CLASSES=["ریاضی 1","ریاضی 2","انسانی"];
 const COMP={morning:"آزمون صبحگاهی",weekly:"آزمون تشریحی",taraz:"تراز آزمون گزینه ۲",study:"ساعت مطالعه",logging:"ثبت مطالعه",quality:"کیفیت مطالعه",classroom:"انضباط و تکالیف کلاسی"};
-const DEF_CFG={weights:{morning:15,weekly:15,taraz:10,study:20,logging:10,quality:15,classroom:15},tarazMin:3000,tarazMax:9000,defaults:{q:'',h:'',s:'',lg:'',hw:1,ex:''},goal:2,goalByClass:{},thresholds:{excellent:85,good:70,attention:55},drop:10,penalty:5,
+const DEF_CFG={weights:{morning:15,weekly:15,taraz:10,study:20,logging:10,quality:15,classroom:15},tarazMin:3000,tarazMax:9000,minData:40,defaults:{q:'',h:'',s:'',lg:'',hw:1,ex:''},goal:2,goalByClass:{},thresholds:{excellent:85,good:70,attention:55},drop:10,penalty:5,
   cardMsg:{e:{t:'',s:''},g:{t:'',s:''},a:{t:'',s:''},f:{t:'',s:''},u:{t:'',s:''}}};
 
 function mergeCfg(saved){
@@ -61,7 +61,7 @@ function mergeCfg(saved){
   return c;
 }
 function parseHM(raw){const t=String(raw||'').trim().replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));if(t==='')return null;
-  if(!/^\d{1,2}(\.\d{1,2})?$/.test(t))return{invalid:true};const a=t.split('.'),h=+a[0],m=a[1]!=null?+a[1]:0;
+  if(!/^\d{1,2}(\.\d{2})?$/.test(t))return{invalid:true};const a=t.split('.'),h=+a[0],m=a[1]!=null?+a[1]:0;
   if(h>24||m>59)return{invalid:true};return{value:h+m/60};}
 let GROUPS=[],STAFF=[],ASSIGN=[],STUDENTS=[],CFG=null;
 const STAFF_DOMAIN='@staff.local'; // ایمیل داخلی و نامرئی؛ مسئولین فقط نام‌کاربری وارد می‌کنند
@@ -151,7 +151,7 @@ function render(){
    <h3 style="margin-top:14px">آستانه‌ها و هشدارها</h3><div class="g4">
    <div><label>حداقل «عالی»</label><input type="number" id="t1" value="${c.thresholds.excellent}"></div><div><label>حداقل «خوب»</label><input type="number" id="t2" value="${c.thresholds.good}"></div><div><label>حداقل «نیاز به توجه»</label><input type="number" id="t3" value="${c.thresholds.attention}"></div>
    <div><label>افت قابل‌توجه (امتیاز)</label><input type="number" id="dr" value="${c.drop}"></div></div>
-   <div class="g4" style="margin-top:10px"><div><label>جریمه هر اخراج (امتیاز)</label><input type="number" id="pn" value="${c.penalty}"></div></div>
+   <div class="g4" style="margin-top:10px"><div><label>جریمه هر اخراج (امتیاز)</label><input type="number" id="pn" value="${c.penalty}"></div><div><label>حداقل کامل‌بودن داده برای وضعیت و رتبه (٪)</label><input type="number" id="md" min="0" max="100" value="${c.minData}"></div></div>
    <h3 style="margin-top:16px">تبدیل تراز آزمون گزینه ۲ به نمره‌ی ۰ تا ۱۰۰</h3>
    <div class="g4"><div><label>ترازی که معادل ۰ است</label><input type="number" id="tzmin" value="${c.tarazMin}"></div><div><label>ترازی که معادل ۱۰۰ است</label><input type="number" id="tzmax" value="${c.tarazMax}"></div></div>
    <p class="mu">میانگین تراز دانش‌آموز در ماه به‌صورت خطی بین این دو عدد به نمره‌ی ۰ تا ۱۰۰ تبدیل می‌شود و با وزن «تراز آزمون گزینه ۲» در امتیاز کلی اثر می‌گذارد.</p>
@@ -247,7 +247,7 @@ function wireEvents(){
     if(!(tzmax>tzmin)){alert('تراز معادل ۱۰۰ باید بزرگ‌تر از تراز معادل ۰ باشد.');return;}
     let dh=$('df_h').value.trim();if(dh!==''){const pp=parseHM(dh);if(!pp||pp.invalid){alert('فرمت ساعت پیش‌فرض نامعتبر است (مثال: 1.30).');return;}}
     const defaults={q:$('df_q').value.trim(),h:dh,s:$('df_s').value,lg:$('df_lg').value,hw:$('df_hw').value,ex:$('df_ex').value.trim()};
-    const cfg=Object.assign({},CFG,{tarazMin:tzmin,tarazMax:tzmax,defaults,weights:w,goal:+$('gd').value||2,goalByClass:gb,thresholds:{excellent:t1,good:t2,attention:t3},drop:+$('dr').value||10,penalty:+$('pn').value||0,cardMsg});
+    const cfg=Object.assign({},CFG,{minData:Math.max(0,Math.min(100,+$('md').value||0)),tarazMin:tzmin,tarazMax:tzmax,defaults,weights:w,goal:+$('gd').value||2,goalByClass:gb,thresholds:{excellent:t1,good:t2,attention:t3},drop:+$('dr').value||10,penalty:+$('pn').value||0,cardMsg});
     $('svc').disabled=true;
     const {error}=await sb.from('cfg').update({data:cfg}).eq('id',1);
     $('svc').disabled=false;

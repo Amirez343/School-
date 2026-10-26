@@ -229,3 +229,9 @@ drop policy if exists "cfg read" on cfg;
 create policy "cfg read" on cfg for select using (auth.uid() is not null);
 drop policy if exists "cfg admin update" on cfg;
 create policy "cfg admin update" on cfg for update using (is_admin());
+
+-- (به‌روزرسانی ۴) ثبت و ویرایش آزمون برای همه‌ی کاربران واردشده
+drop policy if exists "exams staff insert" on exams;
+create policy "exams staff insert" on exams for insert with check (auth.uid() is not null);
+drop policy if exists "exams staff update" on exams;
+create policy "exams staff update" on exams for update using (auth.uid() is not null) with check (auth.uid() is not null);

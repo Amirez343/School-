@@ -61,7 +61,7 @@ const CLASSES=["ریاضی 1","ریاضی 2","انسانی"];
 const COMP={morning:"آزمون صبحگاهی",weekly:"آزمون تشریحی",taraz:"تراز آزمون گزینه ۲",study:"ساعت مطالعه",logging:"ثبت مطالعه",quality:"کیفیت مطالعه",classroom:"انضباط و تکالیف کلاسی"};
 const CKEY={morning:'morningScore',weekly:'weeklyScore',taraz:'tarazScore',study:'studyScore',logging:'loggingScore',quality:'qualityScore',classroom:'classroomScore'};
 const JM=["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
-const DEF_CFG={weights:{morning:15,weekly:15,taraz:10,study:20,logging:10,quality:15,classroom:15},tarazMin:3000,tarazMax:9000,defaults:{q:'',h:'',s:'',lg:'',hw:1,ex:''},goal:2,goalByClass:{},thresholds:{excellent:85,good:70,attention:55},drop:10,penalty:5,
+const DEF_CFG={weights:{morning:15,weekly:15,taraz:10,study:20,logging:10,quality:15,classroom:15},tarazMin:3000,tarazMax:9000,minData:40,defaults:{q:'',h:'',s:'',lg:'',hw:1,ex:''},goal:2,goalByClass:{},thresholds:{excellent:85,good:70,attention:55},drop:10,penalty:5,
   cardMsg:{
     e:{t:'عالی پیش می‌روی! 🌟',s:'همین‌طور با انگیزه ادامه بده، نتیجه عالی گرفتی.'},
     g:{t:'خوب کار می‌کنی 💪',s:'با کمی تلاش بیشتر، این ماه از هر ماه بهتر می‌شه.'},
@@ -88,15 +88,25 @@ function netErr(e){console.error(e);toast('⚠️ خطا در ارتباط با 
 
 /* بارگذاری کامل داده‌ها از Supabase پس از ورود موفق؛ این سامانه هیچ داده‌ی واقعی را در localStorage نگه نمی‌دارد
    و بدون نشست کاربری معتبر و اتصال اینترنت هیچ داده‌ای نمایش داده نمی‌شود. */
+async function fetchAll(table,orderCols){
+  const out=[],step=1000;
+  for(let from=0;;from+=step){
+    let q=sb.from(table).select('*');orderCols.forEach(c=>{q=q.order(c);});
+    const {data,error}=await q.range(from,from+step-1);
+    if(error)return{error};
+    out.push(...data);if(data.length<step)break;
+  }
+  return{data:out};
+}
 async function loadFromSupabase(){
   S=newState();
   const [gq,sq,dq,eq,esq,aq,cq]=await Promise.all([
     sb.from('groups').select('*'),
-    sb.from('students').select('*'),
-    sb.from('days').select('*'),
+    fetchAll('students',['id']),
+    fetchAll('days',['id']),
     sb.from('exams').select('*'),
-    sb.from('exam_scores').select('*'),
-    sb.from('actions').select('*'),
+    fetchAll('exam_scores',['exam_id','student_id']),
+    fetchAll('actions',['id']),
     sb.from('cfg').select('*').eq('id',1).maybeSingle()
   ]);
   for(const r of [gq,sq,dq,eq,esq,aq,cq]) if(r.error) throw r.error;
@@ -135,10 +145,12 @@ async function remoteSaveDay(date,sid,rec){
 async function remoteSaveExam(obj){
   const {error}=await sb.from('exams').upsert({id:obj.id,date:obj.date,title:obj.title,type:obj.type,subject:obj.subject,total:obj.total});
   if(error)throw error;
-  const {error:de}=await sb.from('exam_scores').delete().eq('exam_id',obj.id);
-  if(de)throw de;
-  const rows=Object.entries(obj.scores||{}).map(([sid,score])=>({exam_id:obj.id,student_id:sid,score}));
-  if(rows.length){const {error:ie}=await sb.from('exam_scores').insert(rows); if(ie)throw ie;}
+  const ids=Object.keys(obj.scores||{});
+  const rows=ids.map(sid=>({exam_id:obj.id,student_id:sid,score:obj.scores[sid]}));
+  if(rows.length){const {error:ie}=await sb.from('exam_scores').upsert(rows,{onConflict:'exam_id,student_id'}); if(ie)throw ie;}
+  let del=sb.from('exam_scores').delete().eq('exam_id',obj.id);
+  if(ids.length)del=del.not('student_id','in','('+ids.join(',')+')');
+  const {error:de}=await del;if(de)throw de;
 }
 async function remoteDeleteExam(id){ const {error}=await sb.from('exams').delete().eq('id',id); if(error)throw error; }
 async function remoteSaveAction(obj){
@@ -256,7 +268,7 @@ function openJalaliPicker(inputEl,onPick){
   });
   render();document.body.appendChild(bg);focusGrid();
 }
-function todayISO(){return new Date().toISOString().slice(0,10);}
+function todayISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');} // تاریخ محلی (نه UTC)
 function monthList(){
   if(!MONTHS){const s=new Set([monthOf(todayISO())]);Object.keys(S.days).forEach(d=>s.add(monthOf(d)));S.exams.forEach(e=>s.add(monthOf(e.date)));MONTHS=[...s].sort().reverse();}
   return MONTHS;
@@ -301,23 +313,29 @@ function compute(sid,m){
   const exp=sum(recs.map(r=>r.ex||0));
   const hasCls=hw.length||exp>0; // «۰ اخراج» ثبت‌شده با خالی‌گذاشتن یکسان است و امتیاز اضافه نمی‌دهد
   const classroom=hwRate!=null?Math.max(0,hwRate-exp*cfg.penalty):(hasCls?Math.max(0,100-exp*cfg.penalty):null);
+  const R=v=>v==null?null:Math.round(v*10)/10; // یک رقم اعشار؛ نمایش، وضعیت و رتبه همه از همین عدد می‌آیند
   const comps={morning,weekly,taraz,study,logging,quality,classroom};
+  Object.keys(comps).forEach(k=>{comps[k]=R(comps[k]);});
   const av=Object.entries(comps).filter(([k,v])=>v!=null);
   const tw=sum(av.map(([k])=>cfg.weights[k]||0));
-  const overall=tw>0?sum(av.map(([k,v])=>v*(cfg.weights[k]||0)))/tw:null;
-  return CACHE[key]={sid,m,morningScore:morning,generalScore:gen.length?avg(gen):null,specialScore:spe.length?avg(spe):null,weeklyScore:weekly,tarazScore:taraz,tarazRaw,studyScore:study,loggingScore:logging,qualityScore:quality,classroomScore:classroom,overall,completeness:Math.round(av.length/Object.keys(comps).length*100),hwRate,exp,avgH,goal,absent:recs.filter(r=>r.qa).length};
+  const overall=tw>0?R(sum(av.map(([k,v])=>v*(cfg.weights[k]||0)))/tw):null;
+  const hasEx=S.exams.some(e=>monthOf(e.date)===m&&e.type!=='taraz'),hasTz=S.exams.some(e=>monthOf(e.date)===m&&e.type==='taraz');
+  const appl=Object.keys(comps).filter(k=>(cfg.weights[k]||0)>0&&(k!=='weekly'||hasEx)&&(k!=='taraz'||hasTz));
+  const completeness=appl.length?Math.round(appl.filter(k=>comps[k]!=null).length/appl.length*100):0;
+  return CACHE[key]={sid,m,morningScore:comps.morning,generalScore:gen.length?R(avg(gen)):null,specialScore:spe.length?R(avg(spe)):null,weeklyScore:comps.weekly,tarazScore:comps.taraz,tarazRaw,studyScore:comps.study,loggingScore:comps.logging,qualityScore:comps.quality,classroomScore:comps.classroom,overall,completeness,days:recs.length,hwRate:R(hwRate),hwN:hw.length,exp,avgH,goal,absent:recs.filter(r=>r.qa).length};
 }
 function rankOf(sid,m){
   const st=stById(sid);if(!st)return null;
-  const list=active().map(x=>({s:x,o:compute(x.id,m).overall})).filter(x=>x.o!=null);
+  const list=active().map(x=>({s:x,c:compute(x.id,m)})).filter(x=>valid(x.c)).map(x=>({s:x.s,o:x.c.overall}));
   const me=list.find(x=>x.s.id===sid);if(!me)return null;
   const rk=a=>1+a.filter(x=>x.o>me.o+1e-9).length;
   const cl=list.filter(x=>x.s.cls===st.cls);
   return{school:rk(list),nSchool:list.length,cls:rk(cl),nCls:cl.length};
 }
-function classify(o){
-  const t=S.cfg.thresholds;
-  if(o==null)return{l:'داده ناکافی',c:'u'};
+const valid=r=>r&&r.overall!=null&&r.completeness>=(S.cfg.minData||0); // نمره‌ی مبتنی بر داده‌ی خیلی کم، نه رتبه می‌گیرد و نه در میانگین‌ها می‌آید
+function classify(x){
+  const obj=x!=null&&typeof x==='object',o=obj?x.overall:x,t=S.cfg.thresholds;
+  if(o==null||(obj&&!valid(x)))return{l:'داده ناکافی',c:'u'};
   if(o>=t.excellent)return{l:'عالی',c:'e'};
   if(o>=t.good)return{l:'خوب',c:'g'};
   if(o>=t.attention)return{l:'نیاز به توجه',c:'a'};
@@ -326,7 +344,8 @@ function classify(o){
 function weak(r){return Object.keys(COMP).filter(k=>r[CKEY[k]]!=null&&r[CKEY[k]]<S.cfg.thresholds.attention).map(k=>COMP[k]);}
 function reasons(sid,m){
   const c=compute(sid,m),p=compute(sid,addM(m,-1)),cf=S.cfg,out=[],w=weak(c);
-  if(c.overall!=null&&c.overall<cf.thresholds.attention)out.push('امتیاز کلی پایین ('+F(c.overall)+')');
+  if(c.days>0&&c.completeness<(cf.minData||0))out.push('داده‌ی ثبت‌شده‌ی این ماه کافی نیست ('+c.completeness+'٪ کامل)');
+  if(valid(c)&&c.overall<cf.thresholds.attention)out.push('امتیاز کلی پایین ('+F(c.overall)+')');
   if(w.length>=2)out.push('چند شاخص ضعیف: '+w.join('، '));
   if(c.overall!=null&&p.overall!=null&&p.overall-c.overall>=cf.drop)out.push('افت '+F(p.overall-c.overall)+' امتیازی نسبت به ماه قبل');
   if(c.studyScore!=null&&p.studyScore!=null&&p.studyScore-c.studyScore>=cf.drop)out.push('کاهش ساعت مطالعه نسبت به ماه قبل');
@@ -344,6 +363,9 @@ async function delOneRecord(date,sid){
 }
 
 /* ---- وارد کردن نمرات آزمون صبحگاهی از اکسل (چسباندن یا فایل CSV) ---- */
+function normNum(s){return normDigits(String(s==null?'':s)).replace(/٫/g,'.').replace(/[٬,،]/g,'').replace(/\//g,'.').replace(/[−–—]/g,'-').trim();}
+function numOf(s){const t=normNum(s);if(t==='')return null;return /^-?\d+(\.\d+)?$/.test(t)?parseFloat(t):NaN;}
+function fmtDur(h){if(h==null||isNaN(h))return'—';let H=Math.floor(h),M=Math.round((h-H)*60);if(M===60){H++;M=0;}return((H?fa2(H)+' ساعت':'')+(H&&M?' و ':'')+(M?fa2(M)+' دقیقه':''))||'۰';}
 function normDigits(s){
   return String(s)
     .replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
@@ -352,16 +374,15 @@ function normDigits(s){
 function parsePercentCell(raw){
   let t=(raw||'').trim();
   if(t===''||t==='-'||t==='غ'||t==='غایب'||t.toLowerCase()==='absent')return{absent:true};
-  t=normDigits(t).replace(/[٪%]/g,'').trim();
-  const num=parseFloat(t);
-  if(isNaN(num)||num>100)return{invalid:true};
+  const num=numOf(t.replace(/[٪%]/g,''));
+  if(num==null||isNaN(num)||num>100||num<-100)return{invalid:true};
   return{value:Math.round(num*10)/10};
 }
 /* فرمت ورود ساعت مطالعه: اول ساعت، سپس نقطه، سپس دقیقه (مثلاً 1.30 یعنی یک ساعت و سی دقیقه) — نه عدد اعشاری معمولی */
 function parseHM(raw){
   let t=normDigits((raw||'').trim());
   if(t==='')return null;
-  if(!/^\d{1,2}(\.\d{1,2})?$/.test(t))return{invalid:true};
+  if(!/^\d{1,2}(\.\d{2})?$/.test(t))return{invalid:true}; // دقیقه حتماً دو رقمی: 1.05 یک ساعت و پنج دقیقه، 1.30 یک ساعت و سی دقیقه
   const parts=t.split('.');
   const h=parseInt(parts[0],10);
   const m=parts[1]!=null?parseInt(parts[1],10):0;
@@ -394,6 +415,7 @@ function buildImportPreview(text){
     let parts=line.split('\t');
     if(parts.length<2)parts=line.split(',');
     if(parts.length<2)parts=line.split(/\s{2,}/);
+    if(parts.length<2){const mm=line.match(/^(.*?)\s+(-?[\d۰-۹٠-٩][\d۰-۹٠-٩.٫\/]*\s*[٪%]?|غ|غایب)$/);if(mm)parts=[mm[1],mm[2]];}
     const name=(parts[0]||'').trim(),pctRaw=(parts.slice(1).join(' ')||'').trim();
     const match=matchStudentByName(name),pr=parsePercentCell(pctRaw);
     return{name,pctRaw,sid:match.sid,ambiguous:match.ambiguous,absent:pr.absent||false,value:pr.value!=null?pr.value:null,invalid:!!pr.invalid};
@@ -485,9 +507,11 @@ function line(labels,vals,c){
   return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'<path class="ln" pathLength="1" d="'+path+'" fill="none" stroke="'+c.br+'" stroke-width="2"/>'+dots+lb+'</svg>';
 }
 function trend(sid,m){const ms=[];for(let i=5;i>=0;i--)ms.push(addM(m,-i));return {ms,vals:ms.map(x=>sid?compute(sid,x).overall:schoolAvg(x))};}
-function schoolAvg(m){return avg(active().map(s=>compute(s.id,m).overall).filter(v=>v!=null));}
+function schoolAvg(m){return avg(active().map(s=>compute(s.id,m)).filter(valid).map(r=>r.overall));}
 
-function show(t){TAB=t;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));banner();({dash:vDash,entry:vEntry,follow:vFollow,manage:vManage})[t]();window.scrollTo(0,0);if(window.FX){if(t!=='entry')FX.setFab(null);FX.afterShow();}}
+let DIRTY=false;
+addEventListener('beforeunload',e=>{if(DIRTY){e.preventDefault();e.returnValue='';}});
+function show(t){if(DIRTY&&!confirm('اطلاعاتی که وارد کرده‌اید هنوز ذخیره نشده است. بدون ذخیره خارج می‌شوید؟'))return;DIRTY=false;TAB=t;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));banner();({dash:vDash,entry:vEntry,follow:vFollow,manage:vManage})[t]();window.scrollTo(0,0);if(window.FX){if(t!=='entry')FX.setFab(null);FX.afterShow();}}
 function banner(){ $('banner').innerHTML=''; }
 
 /* ---- داشبورد و گزارش ---- */
@@ -495,12 +519,17 @@ function vDash(){
   if(!MON)MON=monthList()[0];
   const st=active().filter(s=>!DASHCLS||s.cls===DASHCLS),rs=st.map(s=>compute(s.id,MON));
   const all=active().map(s=>compute(s.id,MON));
-  const ov=rs.map(r=>r.overall).filter(v=>v!=null),prevAvg=avg(st.map(s=>compute(s.id,addM(MON,-1)).overall).filter(v=>v!=null));
-  const cnt={e:0,g:0,a:0,f:0,u:0};rs.forEach(r=>cnt[classify(r.overall).c]++);
+  const ov=rs.filter(valid).map(r=>r.overall);
+  const pairs=st.map((s,i)=>({a:rs[i],b:compute(s.id,addM(MON,-1))})).filter(x=>valid(x.a)&&valid(x.b));
+  const A=avg(ov),dAvg=pairs.length?avg(pairs.map(x=>x.a.overall-x.b.overall)):null; // تغییر فقط روی دانش‌آموزانی که در هر دو ماه داده دارند
+  const cnt={e:0,g:0,a:0,f:0,u:0};rs.forEach(r=>cnt[classify(r).c]++);
   const ca=k=>avg(rs.map(r=>r[CKEY[k]]).filter(v=>v!=null));
   const wc={};rs.forEach(r=>weak(r).forEach(w=>wc[w]=(wc[w]||0)+1));
   const tw=Object.entries(wc).sort((a,b)=>b[1]-a[1]);
-  const tr=trend(null,MON);const A=avg(ov);
+  const tr=trend(null,MON);
+  const ents=st.map((s,i)=>({s,r:rs[i]}));
+  const needF=ents.filter(x=>classify(x.r).c==='f'),needA=ents.filter(x=>classify(x.r).c==='a'),expN=ents.filter(x=>x.r.exp>0),noData=ents.filter(x=>x.r.days===0);
+  const tdy=S.days[todayISO()]||{},missToday=st.filter(x=>!tdy[x.id]).length;
   $('view').innerHTML=`
   <div class="row noprint">${monthSel('dm')}
     <div class="f" style="max-width:200px"><label>کلاس/رشته</label><select id="dc"><option value="">همه</option>${CLASSES.map(c=>'<option'+(DASHCLS===c?' selected':'')+'>'+c+'</option>').join('')}</select></div>
@@ -508,9 +537,16 @@ function vDash(){
     <button class="btn p" id="allPdf">📦 دانلود همه کارنامه‌ها (PDF)</button></div>
   <h3>گزارش ${mlabel(MON)}${DASHCLS?' — '+DASHCLS:''}</h3>
   ${S.students.length?'':'<div class="card">هنوز دانش‌آموزی ثبت نشده. از تب «مدیریت» شروع کنید.</div>'}
+  ${S.students.length&&(needF.length||needA.length||expN.length||missToday)?'<div class="card" style="margin-bottom:12px"><h3 style="margin-top:0">🎯 در یک نگاه</h3><div style="display:flex;flex-wrap:wrap;gap:8px">'
+    +(needF.length?'<span class="b f" title="'+esc(needF.map(x=>x.s.name).join('، '))+'">'+fa2(needF.length)+' نفر نیازمند پیگیری: '+esc(needF.slice(0,4).map(x=>x.s.name).join('، '))+(needF.length>4?'…':'')+'</span>':'')
+    +(needA.length?'<span class="b a" title="'+esc(needA.map(x=>x.s.name).join('، '))+'">'+fa2(needA.length)+' نفر نیاز به توجه</span>':'')
+    +(expN.length?'<span class="b f">⚠️ '+fa2(expN.length)+' نفر دارای اخراج از کلاس در این ماه</span>':'')
+    +(noData.length?'<span class="b u">'+fa2(noData.length)+' نفر بدون هیچ داده‌ی این ماه</span>':'')
+    +(MON===monthOf(todayISO())&&missToday?'<span class="b u">امروز برای '+fa2(missToday)+' نفر هنوز چیزی ثبت نشده</span>':'')
+    +'</div></div>':''}
   <div class="grid g4">
     <div class="card stat"><div class="l">تعداد دانش‌آموزان</div><div class="v">${st.length}</div></div>
-    <div class="card stat"><div class="l">میانگین عملکرد</div><div class="v">${F(A)}</div><div class="mu">تغییر نسبت به ماه قبل: ${A!=null&&prevAvg!=null?(A-prevAvg>=0?'+':'')+r1(A-prevAvg):'—'}</div></div>
+    <div class="card stat"><div class="l">میانگین عملکرد</div><div class="v">${F(A)}</div><div class="mu">تغییر نسبت به ماه قبل: ${dAvg!=null?'<b style="color:var(--'+(dAvg>=0?'ok':'bad')+')">'+(dAvg>=0?'▲ +':'▼ ')+r1(dAvg)+'</b>':'—'}</div></div>
     <div class="card stat"><div class="l">نیازمند پیگیری / نیاز به توجه</div><div class="v">${cnt.f} / ${cnt.a}</div></div>
     <div class="card stat"><div class="l">کامل‌بودن داده‌ها</div><div class="v">${F(avg(rs.map(r=>r.completeness)))}٪</div></div>
   </div>
@@ -524,12 +560,12 @@ function vDash(){
   </div>
   <div class="card"><h3>روند ۶ ماه اخیر مدرسه</h3>${line(tr.ms.map(m=>JM[+m.split('-')[1]-1]),tr.vals)}</div>
   <div class="card"><h3>وضعیت دانش‌آموزان <span class="mu">(برای گزارش فردی روی نام کلیک کنید — مرتب بر اساس امتیاز)</span></h3>
-  <div class="tw"><table><thead><tr><th>رتبه</th><th>نام</th><th>کلاس</th><th>امتیاز</th><th>وضعیت</th><th>تغییر</th><th>داده</th><th>نقاط ضعف</th></tr></thead><tbody>
-  ${(()=>{const L=st.map((s,i)=>({s,r:rs[i]})).sort((a,b)=>(a.r.overall==null)-(b.r.overall==null)||(b.r.overall||0)-(a.r.overall||0)||a.s.name.localeCompare(b.s.name,'fa'));
-   const rkOf=r=>r.overall==null?'—':fa2(1+L.filter(x=>x.r.overall!=null&&x.r.overall>r.overall+1e-9).length);
-   return L.map(({s,r})=>{const p=compute(s.id,addM(MON,-1));return '<tr><td><b>'+rkOf(r)+'</b></td><td><a href="#" onclick="stReport(\''+s.id+'\');return false">'+esc(s.name)+'</a></td><td>'+esc(s.cls)+'</td><td>'+F(r.overall)+'</td><td>'+badge(r.overall)+'</td><td>'+(r.overall!=null&&p.overall!=null?(r.overall-p.overall>=0?'+':'')+r1(r.overall-p.overall):'—')+'</td><td>'+r.completeness+'٪</td><td class="mu" style="white-space:normal">'+esc(weak(r).join('، ')||'—')+'</td></tr>';}).join('');})()}
+  <div class="tw"><table><thead><tr><th>رتبه</th><th>نام</th><th>کلاس</th><th>امتیاز</th><th>وضعیت</th><th>تغییر</th><th>روز ثبت</th><th>داده</th><th>نقاط ضعف</th></tr></thead><tbody>
+  ${(()=>{const L=st.map((s,i)=>({s,r:rs[i]})).sort((a,b)=>(!valid(a.r))-(!valid(b.r))||(b.r.overall||0)-(a.r.overall||0)||a.s.name.localeCompare(b.s.name,'fa'));
+   const rkOf=r=>!valid(r)?'—':fa2(1+L.filter(x=>valid(x.r)&&x.r.overall>r.overall+1e-9).length);
+   return L.map(({s,r})=>{const p=compute(s.id,addM(MON,-1));return '<tr><td><b>'+rkOf(r)+'</b></td><td><a href="#" onclick="stReport(\''+s.id+'\');return false">'+esc(s.name)+'</a></td><td>'+esc(s.cls)+'</td><td style="min-width:120px"><b>'+F(r.overall)+'</b><div class="bar" style="height:5px;margin-top:3px"><div style="width:'+Math.max(0,Math.min(100,r.overall||0))+'%"></div></div></td><td>'+badge(r)+'</td><td>'+(valid(r)&&valid(p)?'<b style="color:var(--'+(r.overall-p.overall>=0?'ok':'bad')+')">'+(r.overall-p.overall>=0?'▲ +':'▼ ')+r1(r.overall-p.overall)+'</b>':'—')+'</td><td>'+fa2(r.days)+'</td><td'+(r.completeness<(S.cfg.minData||0)?' style="color:var(--bad)"':'')+'>'+fa2(r.completeness)+'٪</td><td class="mu" style="white-space:normal">'+esc(weak(r).join('، ')||'—')+'</td></tr>';}).join('');})()}
   </tbody></table></div></div>`;
-  $('allPdf').onclick=()=>downloadCards(st.filter(x=>compute(x.id,MON).overall!=null).map(x=>x.id),MON,'کارنامه‌ها — '+mlabel(MON)+(DASHCLS?' — '+DASHCLS:'')+'.zip',st.length);
+  $('allPdf').onclick=()=>downloadCards(st.filter(x=>valid(compute(x.id,MON))).map(x=>x.id),MON,'کارنامه‌ها — '+mlabel(MON)+(DASHCLS?' — '+DASHCLS:'')+'.zip',st.length);
   $('dm').onchange=e=>{MON=e.target.value;vDash();};$('dc').onchange=e=>{DASHCLS=e.target.value;vDash();};
 }
 function stReport(sid){
@@ -538,10 +574,10 @@ function stReport(sid){
   const strong=Object.keys(COMP).filter(k=>c[CKEY[k]]!=null&&c[CKEY[k]]>=S.cfg.thresholds.good).map(k=>COMP[k]);
   const acts=S.actions.filter(a=>a.sid===sid).sort((a,b)=>a.date<b.date?1:-1).slice(0,3);
   const bg=document.createElement('div');bg.className='mbg';
-  bg.innerHTML=`<div class="modal"><div style="display:flex;justify-content:space-between"><div><h3 style="margin:0">${esc(s.name)}</h3><span class="mu">${esc(s.cls)} — ${mlabel(MON)}</span></div><div style="text-align:left"><div style="font-size:26px;font-weight:800">${F(c.overall)}</div>${badge(c.overall)}</div></div>
-  <p class="mu">تغییر نسبت به ماه قبل: ${c.overall!=null&&p.overall!=null?r1(c.overall-p.overall):'—'} — کامل‌بودن داده: ${c.completeness}٪</p>
+  bg.innerHTML=`<div class="modal"><div style="display:flex;justify-content:space-between"><div><h3 style="margin:0">${esc(s.name)}</h3><span class="mu">${esc(s.cls)} — ${mlabel(MON)}</span></div><div style="text-align:left"><div style="font-size:26px;font-weight:800">${F(c.overall)}</div>${badge(c)}</div></div>
+  <p class="mu">تغییر نسبت به ماه قبل: ${valid(c)&&valid(p)?r1(c.overall-p.overall):'—'} — روزهای ثبت‌شده: ${fa2(c.days)} — کامل‌بودن داده: ${c.completeness}٪</p>
   <table><tbody>${rows.map(([l,k])=>'<tr><td>'+l+'</td><td>'+F(c[k])+(c[k]==null?' <span class="mu">(بدون داده)</span>':'')+'</td></tr>').join('')}
-  <tr><td>نرخ انجام تکالیف</td><td>${F(c.hwRate)}${c.hwRate!=null?'٪':''}</td></tr>${c.tarazRaw!=null?'<tr><td>میانگین تراز خام</td><td>'+fa2(Math.round(c.tarazRaw))+'</td></tr>':''}<tr><td style="color:var(--bad)">⚠️ تعداد اخراج از کلاس (مورد منفی)</td><td style="color:${c.exp>0?'var(--bad)':'inherit'};font-weight:${c.exp>0?800:400}">${c.exp}</td></tr><tr><td>میانگین مطالعه روزانه / هدف</td><td>${F(c.avgH)} / ${c.goal} ساعت</td></tr></tbody></table>
+  <tr><td>نرخ انجام تکالیف</td><td>${F(c.hwRate)}${c.hwRate!=null?'٪':''}</td></tr>${c.tarazRaw!=null?'<tr><td>میانگین تراز خام</td><td>'+fa2(Math.round(c.tarazRaw))+'</td></tr>':''}<tr><td style="color:var(--bad)">⚠️ تعداد اخراج از کلاس (مورد منفی)</td><td style="color:${c.exp>0?'var(--bad)':'inherit'};font-weight:${c.exp>0?800:400}">${c.exp}</td></tr><tr><td>میانگین مطالعه روزانه / هدف</td><td>${fmtDur(c.avgH)} / ${fmtDur(c.goal)}</td></tr></tbody></table>
   <p><b>نقاط قوت:</b> ${esc(strong.join('، ')||'—')}<br><b>نقاط ضعف:</b> ${esc(w.join('، ')||'—')}</p>
   ${line(tr.ms.map(m=>JM[+m.split('-')[1]-1]),tr.vals)}
   <b>پیشنهاد پیگیری:</b>${rs.length?'<ul class="r">'+rs.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':' <span class="mu">موردی شناسایی نشد.</span>'}
@@ -561,7 +597,7 @@ function rankTile(label,rank,n){
 function cardHTML(sid,m){
   m=m||MON;
   const s=stById(sid),c=compute(sid,m),tr=trend(sid,m),rk=rankOf(sid,m);
-  const fr=(S.cfg.cardMsg&&S.cfg.cardMsg[classify(c.overall).c])||{t:'',s:''};
+  const fr=(S.cfg.cardMsg&&S.cfg.cardMsg[classify(c).c])||{t:'',s:''};
   const strong=Object.keys(COMP).filter(k=>c[CKEY[k]]!=null&&c[CKEY[k]]>=S.cfg.thresholds.good);
   const weakK=Object.keys(COMP).filter(k=>c[CKEY[k]]!=null&&c[CKEY[k]]<S.cfg.thresholds.attention);
   const tipK=weakK[0]||Object.keys(COMP).filter(k=>c[CKEY[k]]!=null).sort((a,b)=>c[CKEY[a]]-c[CKEY[b]])[0];
@@ -584,6 +620,8 @@ function cardHTML(sid,m){
    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
     ${Object.keys(COMP).map(k=>{const v=c[CKEY[k]];return `<div style="background:#f7f8fb;border-radius:12px;padding:10px 12px">
       <div style="display:flex;justify-content:space-between;font-size:13px"><span>${COMP_ICON[k]} ${COMP[k]}</span><b>${v==null?'—':fa2(r1(v))}</b></div>
+      ${k==='study'&&c.avgH!=null?'<div style="font-size:11px;color:#6b7684;margin-top:2px">میانگین روزانه: '+fmtDur(c.avgH)+' از هدف '+fmtDur(c.goal)+'</div>':''}
+      ${k==='classroom'&&c.hwRate!=null?'<div style="font-size:11px;color:#6b7684;margin-top:2px">تکالیف: '+fa2(Math.round(c.hwRate))+'٪ انجام‌شده</div>':''}
       ${k==='taraz'&&c.tarazRaw!=null?'<div style="font-size:11px;color:#6b7684;margin-top:2px">تراز: '+fa2(Math.round(c.tarazRaw))+'</div>':''}
       <div class="bar" style="margin-top:6px"><div style="width:${Math.max(0,Math.min(100,v||0))}%;background:${color}"></div></div></div>`;}).join('')}
    </div>
@@ -652,6 +690,7 @@ async function downloadCards(ids,m,zipName,totalCount){
 
 /* ---- ثبت داده ---- */
 function vEntry(){
+  if(DIRTY&&!confirm('اطلاعات واردشده هنوز ذخیره نشده است. بدون ذخیره ادامه می‌دهید؟'))return;DIRTY=false;
   $('view').innerHTML='<div class="sub"><button class="btn'+(SUBENTRY==='daily'?' p':'')+'" onclick="SUBENTRY=\'daily\';vEntry()">ثبت روزانه</button><button class="btn'+(SUBENTRY==='exam'?' p':'')+'" onclick="SUBENTRY=\'exam\';vEntry()">آزمون‌ها (تشریحی / تراز)</button><button class="btn'+(SUBENTRY==='overview'?' p':'')+'" onclick="SUBENTRY=\'overview\';vEntry()">🔍 نمای ثبت‌ها</button></div><div id="ent"></div>';
   if(SUBENTRY==='daily')entDaily(todayISO(),'');else if(SUBENTRY==='exam')entExam();else entOverview();
   if(window.FX)FX.setFab(SUBENTRY==='daily'?()=>$('sv'):SUBENTRY==='exam'?()=>$('xsv'):null);
@@ -671,19 +710,20 @@ function entDaily(date,cls){
    <button class="btn d" id="clrDay">🗑 حذف داده‌های این روز</button>
    <button class="btn" id="impXl">📥 وارد کردن آزمون صبحگاهی از اکسل</button></div>
    <div class="mu" style="margin-bottom:8px">${hasDef?'<b>مقادیر پیش‌فرض (طبق تنظیمات مدیر) در ردیف‌های بدون ثبت از قبل پر شده‌اند؛ فقط موارد متفاوت را تغییر دهید.</b> ':''}سلول خالی = «داده ثبت نشده» و هرگز صفر حساب نمی‌شود. اگر دانش‌آموزی غایب بود تیک «غایب» را بزنید. فرمت ساعت مطالعه: اول ساعت سپس نقطه سپس دقیقه — مثلاً <b>1.30</b> یعنی یک ساعت و سی دقیقه (نه عدد اعشاری). درصد آزمون صبحگاهی در صورت نمره‌ی منفی (به‌دلیل جریمه‌ی پاسخ غلط) می‌تواند عدد منفی هم باشد. کل ورود اطلاعات بدون نیاز به ماوس انجام می‌شود: فوکوس از ابتدا روی اولین خانه است، Tab بین خانه‌های یک ردیف و Enter برای رفتن به همان ستون در ردیف بعدی حرکت می‌کند، و با Enter روی آخرین خانه‌ی آخرین ردیف، اطلاعات خودکار ذخیره می‌شود. (Ctrl+S هم هر زمان ذخیره می‌کند)</div>
+   <div id="esum" class="mu" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px"></div>
    <div class="tw" style="max-height:68vh"><table><thead><tr><th>نام</th><th>آزمون صبحگاهی ٪</th><th>غایب</th><th>ساعت مطالعه</th><th>ستاره (۰–۳)</th><th>دفتر مطالعه</th><th>تکلیف</th><th class="neg">اخراج از کلاس ⚠️ (منفی)</th><th></th></tr></thead><tbody>
    ${st.map(s=>{const real=day[s.id],r=real||defRec;return '<tr data-id="'+s.id+'" data-nm="'+esc(s.name)+'"><td>'+esc(s.name)+'</td>'
-    +'<td><input type="number" max="100" step="0.5" class="q" value="'+(r.q!=null?r.q:'')+'"></td>'
+    +'<td><input type="text" inputmode="decimal" class="q" value="'+(r.q!=null?r.q:'')+'"></td>'
     +'<td><input type="checkbox" class="qa"'+(r.qa?' checked':'')+'></td>'
     +'<td><input type="text" inputmode="decimal" class="h" placeholder="مثلاً 1.30" value="'+(r.h!=null?formatHM(r.h):'')+'"></td>'
     +'<td><select class="s">'+sel(r.s==null?'':r.s,[['','—'],[0,'0'],[1,'1'],[2,'2'],[3,'3']])+'</select></td>'
     +'<td><select class="lg">'+sel(r.lg==null?'':r.lg,[['','—'],[1,'ثبت شد'],[0,'ثبت نشد']])+'</select></td>'
     +'<td><select class="hw">'+sel(r.hw==null?'':r.hw,[['','—'],[1,'انجام داد'],[0,'انجام نداد']])+'</select></td>'
-    +'<td><input type="number" min="0" step="1" class="ex" value="'+(r.ex!=null?r.ex:'')+'"></td>'
+    +'<td><input type="text" inputmode="numeric" class="ex" value="'+(r.ex!=null?r.ex:'')+'"></td>'
     +'<td>'+(real&&Object.keys(real).length?'<button type="button" class="btn d small rowdel" data-id="'+s.id+'" title="حذف رکورد این دانش‌آموز در این روز">🗑</button>':'')+'</td></tr>';}).join('')||'<tr><td colspan="9" class="mu">دانش‌آموزی نیست.</td></tr>'}
    </tbody></table></div></div>`;
-  wireJalali('dd',iso=>entDaily(iso,$('dcl').value));
-  $('dcl').onchange=e=>entDaily(isoOf('dd'),e.target.value);
+  wireJalali('dd',iso=>{if(DIRTY&&!confirm('اطلاعات واردشده ذخیره نشده است. با تغییر تاریخ از دست می‌رود. ادامه؟'))return;DIRTY=false;entDaily(iso,$('dcl').value);});
+  $('dcl').onchange=e=>{if(DIRTY&&!confirm('اطلاعات واردشده ذخیره نشده است. با تغییر فیلتر از دست می‌رود. ادامه؟')){e.target.value=cls;return;}DIRTY=false;entDaily(isoOf('dd'),e.target.value);};
   $('clrDay').onclick=async()=>{
     const ids=st.map(s=>s.id).filter(id=>day[id]);
     if(!ids.length){toast('برای این روز (در فیلتر فعلی) داده‌ای ثبت نشده است.');return;}
@@ -699,7 +739,6 @@ function entDaily(date,cls){
     await delOneRecord(date,sid);toast('حذف شد.');entDaily(date,cls);
   });
   $('impXl').onclick=()=>importMorningModal(date,cls);
-  $('dq').oninput=e=>{const q=e.target.value.trim();document.querySelectorAll('#ent tbody tr[data-nm]').forEach(tr=>{tr.style.display=!q||tr.dataset.nm.includes(q)?'':'none';});};
   $('ent').onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();$('sv').click();}};
   const COLS=['q','qa','h','s','lg','hw','ex'];
   function nextRowCell(tr,col){ // ردیف قابل‌مشاهده‌ی بعدی در همان ستون (برای ورود سریع ستونی، مثل آزمون صبحگاهی)
@@ -726,22 +765,41 @@ function entDaily(date,cls){
       }
     });
   });
+  { // خلاصه‌ی لحظه‌ای: چند نفر ثبت شده / چه کسانی مانده‌اند + فیلتر «فقط ثبت‌نشده‌ها» + علامت ردیف‌های مهم
+    let onlyMiss=false;
+    const rowsE=()=>[...document.querySelectorAll('#ent tbody tr[data-id]')];
+    const filled=tr=>tr.querySelector('.qa').checked||['.q','.h','.s','.lg','.hw','.ex'].some(c=>tr.querySelector(c).value!=='');
+    const refresh=()=>{
+      const rs=rowsE(),q=$('dq').value.trim();let n=0;
+      rs.forEach(tr=>{const f=filled(tr);if(f)n++;
+        const ex=numOf(tr.querySelector('.ex').value),qq=numOf(tr.querySelector('.q').value);
+        tr.style.background=ex>0?'rgba(255,59,48,.10)':tr.querySelector('.qa').checked?'rgba(142,142,147,.14)':'';
+        tr.querySelector('.q').style.color=(qq!=null&&!isNaN(qq)&&qq<40)?'var(--bad)':'';
+        tr.style.display=((!q||tr.dataset.nm.includes(q))&&(!onlyMiss||!f))?'':'none';});
+      $('esum').innerHTML='<b>'+fa2(n)+' از '+fa2(rs.length)+'</b> ردیف دارای اطلاعات'+(n<rs.length?' — <span style="color:var(--bad)">'+fa2(rs.length-n)+' نفر هنوز ثبت نشده</span>':' ✓')+' <label style="margin-inline-start:auto;display:flex;gap:6px;align-items:center"><input type="checkbox" id="onlyMiss"'+(onlyMiss?' checked':'')+'> فقط ثبت‌نشده‌ها</label>';
+      $('onlyMiss').onchange=e=>{onlyMiss=e.target.checked;refresh();};
+    };
+    $('dq').oninput=refresh;
+    $('ent').oninput=$('ent').onchange=()=>{DIRTY=true;refresh();};
+    refresh();DIRTY=false;
+  }
   { // فوکوس خودکار روی اولین خانه‌ی قابل‌مشاهده برای شروع ورود اطلاعات بدون نیاز به ماوس
     const firstQ=document.querySelector('#ent tbody tr[data-id]:not([style*="display: none"]) .q');
     if(firstQ) firstQ.focus();
   }
   $('sv').onclick=async()=>{
     const d=isoOf('dd');if(!d){toast('تاریخ نامعتبر است');return;}
+    if(d>todayISO()&&!confirm('تاریخ انتخاب‌شده در آینده است ('+jdate(d)+'). مطمئنید؟'))return;
     const before={...(S.days[d]||{})},rec={...before},errs=[],changed=[];
     document.querySelectorAll('#ent tbody tr[data-id]').forEach(tr=>{
       const id=tr.dataset.id,nm=stById(id).name,g=c=>tr.querySelector(c).value,r={};
       if(tr.querySelector('.qa').checked)r.qa=1;
-      else if(g('.q')!==''){const v=+g('.q');if(isNaN(v)||v>100){errs.push(nm+': درصد نمی‌تواند بیشتر از ۱۰۰ باشد');return;}r.q=v;}
-      if(g('.h')!==''){const p=parseHM(g('.h'));if(!p||p.invalid){errs.push(nm+': فرمت ساعت مطالعه نامعتبر است (مثال درست: 1.30 یعنی یک ساعت و سی دقیقه)');return;}r.h=p.value;}
+      else if(g('.q')!==''){const v=numOf(g('.q'));if(v==null||isNaN(v)||v>100||v<-100){errs.push(nm+': درصد باید عددی بین ۱۰۰- و ۱۰۰ باشد');return;}r.q=v;}
+      if(g('.h')!==''){const p=parseHM(g('.h'));if(!p||p.invalid){errs.push(nm+': فرمت ساعت مطالعه نامعتبر است — دقیقه را دو رقمی بنویسید (مثال: 1.30 یک ساعت و سی دقیقه، 1.05 یک ساعت و پنج دقیقه)');return;}r.h=p.value;}
       if(g('.s')!=='')r.s=+g('.s');
       if(g('.lg')!=='')r.lg=+g('.lg');
       if(g('.hw')!=='')r.hw=+g('.hw');
-      if(g('.ex')!==''){const v=+g('.ex');if(isNaN(v)||v<0||!Number.isInteger(v)){errs.push(nm+': تعداد اخراج نامعتبر');return;}r.ex=v;}
+      if(g('.ex')!==''){const v=numOf(g('.ex'));if(v==null||isNaN(v)||v<0||!Number.isInteger(v)){errs.push(nm+': تعداد اخراج نامعتبر');return;}r.ex=v;}
       const had=JSON.stringify(before[id]||{}),now=JSON.stringify(r);
       if(had!==now)changed.push([id,r]);
       if(Object.keys(r).length)rec[id]=r;else delete rec[id];
@@ -752,7 +810,7 @@ function entDaily(date,cls){
     try{ await Promise.all(changed.map(([id,r])=>remoteSaveDay(d,id,r))); }
     catch(e){ netErr(e); $('sv').disabled=false; return; }
     if(Object.keys(rec).length)S.days[d]=rec;else delete S.days[d];
-    markSaved(true);toast('ذخیره شد ✓');$('sv').disabled=false;
+    markSaved(true);DIRTY=false;toast('ذخیره شد ✓');$('sv').disabled=false;
   };
 }
 function entExam(){
@@ -762,11 +820,11 @@ function entExam(){
    <div class="f"><label>عنوان</label><input id="xt" value="${e?esc(e.title):''}"></div>
    <div class="f"><label>نوع</label><select id="xy"><option value="general"${e&&e.type==='general'?' selected':''}>عمومی</option><option value="specialized"${e&&e.type==='specialized'?' selected':''}>تخصصی</option><option value="taraz"${e&&e.type==='taraz'?' selected':''}>تراز آزمون گزینه ۲</option></select></div>
    <div class="f"><label>درس (اختیاری)</label><input id="xs" value="${e?esc(e.subject||''):''}"></div>
-   <div class="f" style="max-width:110px"><label>نمره کل</label><input type="number" id="xm" value="${e?e.total:20}"></div></div>
+   <div class="f" style="max-width:110px"><label>نمره کل</label><input type="text" inputmode="numeric" id="xm" value="${e?e.total:20}"></div></div>
    <div class="row"><div class="f"><label>چسباندن از اکسل (دو ستون: نام دانش‌آموز، نمره/تراز) — اختیاری</label><textarea id="xpaste" rows="2" placeholder="علی رضایی&#9;6520"></textarea></div><button class="btn" id="xpb">پر کردن جدول از متن</button></div>
    <div class="mu" style="margin-bottom:8px">نمره را فقط برای دانش‌آموزانی که شرکت کرده‌اند بنویسید؛ خالی = شرکت نکرده (در میانگین صفر حساب نمی‌شود). در هر خانه عدد را بنویسید و Enter بزنید تا به ردیف بعدی بروید؛ Enter روی آخرین ردیف، آزمون را ذخیره می‌کند.</div>
    <div class="tw" style="max-height:55vh"><table><thead><tr><th>نام</th><th>کلاس</th><th>نمره</th></tr></thead><tbody>
-   ${st.map(s=>'<tr data-id="'+s.id+'"><td>'+esc(s.name)+'</td><td>'+esc(s.cls)+'</td><td><input type="number" step="any" class="sc" value="'+(e&&e.scores[s.id]!=null?e.scores[s.id]:'')+'"></td></tr>').join('')}</tbody></table></div>
+   ${st.map(s=>'<tr data-id="'+s.id+'"><td>'+esc(s.name)+'</td><td>'+esc(s.cls)+'</td><td><input type="text" inputmode="decimal" class="sc" value="'+(e&&e.scores[s.id]!=null?e.scores[s.id]:'')+'"></td></tr>').join('')}</tbody></table></div>
    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="xsv">ذخیره آزمون</button>${e?'<button class="btn" id="xc">انصراف</button>':''}</div></div>
    <div class="card"><h3>آزمون‌های ثبت‌شده</h3><div class="tw"><table><thead><tr><th>تاریخ</th><th>عنوان</th><th>نوع</th><th>شرکت‌کنندگان</th><th></th></tr></thead><tbody>
    ${[...S.exams].sort((a,b)=>a.date<b.date?1:-1).slice(0,40).map(x=>'<tr><td>'+jdate(x.date)+'</td><td>'+esc(x.title)+'</td><td>'+(x.type==='general'?'عمومی':x.type==='taraz'?'تراز گزینه ۲':'تخصصی')+'</td><td>'+Object.keys(x.scores).length+'</td><td><button class="btn" onclick="EDITEXAM=\''+x.id+'\';entExam()">ویرایش</button> <button class="btn d" onclick="delExam(\''+x.id+'\')">حذف</button></td></tr>').join('')||'<tr><td colspan="5" class="mu">هنوز آزمونی ثبت نشده.</td></tr>'}</tbody></table></div></div>`;
@@ -776,9 +834,9 @@ function entExam(){
   $('xpb').onclick=()=>{
     const lines=$('xpaste').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);let ok=0;const miss=[];
     lines.forEach(l=>{let pr=l.split('\t');if(pr.length<2)pr=l.split(',');if(pr.length<2)pr=l.split(/\s{2,}/);
-      const nm=(pr[0]||'').trim(),val=normDigits((pr.slice(1).join(' ')||'').trim()).replace(/[٬,]/g,'');
-      if(!nm)return;const m=matchStudentByName(nm),n=parseFloat(val);
-      if(!m.sid||isNaN(n)){miss.push(nm);return;}
+      const nm=(pr[0]||'').trim(),val=(pr.slice(1).join(' ')||'').trim();
+      if(!nm)return;const m=matchStudentByName(nm),n=numOf(val);
+      if(!m.sid||n==null||isNaN(n)){miss.push(nm);return;}
       const el=document.querySelector('#ent tr[data-id="'+m.sid+'"] .sc');if(el){el.value=n;ok++;}else miss.push(nm);});
     toast(fa2(ok)+' ردیف پر شد'+(miss.length?' — یافت‌نشده/نامعتبر: '+miss.slice(0,5).join('، ')+(miss.length>5?'…':''):' ✓'));
   };
@@ -793,11 +851,13 @@ function entExam(){
   });
   { const firstSc=document.querySelector('#ent tbody tr[data-id] .sc'); if(firstSc) firstSc.focus(); }
   $('xsv').onclick=async()=>{
-    const d=isoOf('xd'),t=$('xt').value.trim(),tot=$('xy').value==='taraz'?10000:+$('xm').value,sc={},errs=[];
+    const d=isoOf('xd'),t=$('xt').value.trim(),tot=$('xy').value==='taraz'?10000:numOf($('xm').value),sc={},errs=[];
     if(!d||!t){toast('تاریخ و عنوان لازم است');return;}
     if(!(tot>0)){toast('نمره کل نامعتبر است');return;}
-    document.querySelectorAll('#ent tr[data-id]').forEach(tr=>{const v=tr.querySelector('.sc').value;if(v==='')return;const n=+v;
-      if(isNaN(n)||n<0||n>tot)errs.push(stById(tr.dataset.id).name+': نمره باید بین ۰ و '+tot+' باشد');else sc[tr.dataset.id]=n;});
+    if(d>todayISO()&&!confirm('تاریخ آزمون در آینده است ('+jdate(d)+'). ادامه می‌دهید؟'))return;
+    if(!e&&S.exams.some(x=>x.date===d&&x.title.trim()===t&&x.type===$('xy').value)&&!confirm('آزمونی با همین تاریخ، عنوان و نوع قبلاً ثبت شده است. باز هم یک آزمون جدید (تکراری) ثبت شود؟ برای اصلاح، از جدول پایین «ویرایش» را بزنید.'))return;
+    document.querySelectorAll('#ent tr[data-id]').forEach(tr=>{const v=tr.querySelector('.sc').value;if(normNum(v)==='')return;const n=numOf(v);
+      if(n==null||isNaN(n)||n<0||n>tot)errs.push(stById(tr.dataset.id).name+': نمره باید بین ۰ و '+tot+' باشد');else sc[tr.dataset.id]=n;});
     if(errs.length){alert(errs.slice(0,8).join('\n'));return;}
     const obj={id:e?e.id:uid(),date:d,title:t,type:$('xy').value,subject:$('xs').value.trim(),total:tot,scores:sc};
     $('xsv').disabled=true;
@@ -817,7 +877,7 @@ function fieldSummary(iso,sid){
   const r=(S.days[iso]||{})[sid]; if(!r)return[];
   const p=[];
   if(r.qa)p.push('آزمون صبحگاهی: غایب'); else if(r.q!=null)p.push('آزمون صبحگاهی: '+r.q+'٪');
-  if(r.h!=null)p.push('مطالعه: '+r.h+' ساعت');
+  if(r.h!=null)p.push('مطالعه: '+fmtDur(r.h));
   if(r.s!=null)p.push('کیفیت مطالعه: '+r.s+'⭐');
   if(r.lg===1)p.push('دفتر مطالعه: ثبت شد'); else if(r.lg===0)p.push('دفتر مطالعه: ثبت نشد');
   if(r.hw===1)p.push('تکلیف: انجام داد'); else if(r.hw===0)p.push('تکلیف: انجام نداد');
@@ -879,7 +939,7 @@ function vFollow(){
   const acts=[...S.actions].sort((a,b)=>a.date<b.date?1:-1);
   $('view').innerHTML=`<div class="row">${monthSel('fm')}</div>
   <div class="card"><h3>فهرست پیگیری خودکار (${rows.length} نفر)</h3><div class="mu">هدف، شناسایی و کمک به بهبود است، نه رتبه‌بندی.</div>
-  ${rows.map(x=>'<div style="border-top:1px solid var(--bd);padding:10px 0"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>'+esc(x.s.name)+' <span class="mu">'+esc(x.s.cls)+'</span></b><span>'+badge(x.c.overall)+' '+F(x.c.overall)+'</span></div><ul class="r">'+x.r.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul><button class="btn" onclick="actModal(\''+x.s.id+'\')">ثبت اقدام</button></div>').join('')||'<div class="mu" style="padding:12px 0">دانش‌آموزی برای پیگیری ویژه شناسایی نشد.</div>'}</div>
+  ${rows.map(x=>'<div style="border-top:1px solid var(--bd);padding:10px 0"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>'+esc(x.s.name)+' <span class="mu">'+esc(x.s.cls)+'</span></b><span>'+badge(x.c)+' '+F(x.c.overall)+'</span></div><ul class="r">'+x.r.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul><button class="btn" onclick="actModal(\''+x.s.id+'\')">ثبت اقدام</button></div>').join('')||'<div class="mu" style="padding:12px 0">دانش‌آموزی برای پیگیری ویژه شناسایی نشد.</div>'}</div>
   <div class="card"><h3>اقدامات ثبت‌شده</h3><div class="tw"><table><thead><tr><th>تاریخ</th><th>دانش‌آموز</th><th>مشکل</th><th>اقدام</th><th>مسئول</th><th>نتیجه</th><th>وضعیت</th><th></th></tr></thead><tbody>
   ${acts.map(a=>'<tr><td>'+jdate(a.date)+'</td><td>'+esc((stById(a.sid)||{}).name||'—')+'</td><td style="white-space:normal">'+esc(a.problem)+'</td><td style="white-space:normal">'+esc(a.action)+'</td><td>'+esc(a.owner)+'</td><td style="white-space:normal">'+esc(a.result)+'</td><td>'+esc(a.status)+'</td><td><button class="btn" onclick="actModal(null,\''+a.id+'\')">ویرایش</button></td></tr>').join('')||'<tr><td colspan="8" class="mu">هنوز اقدامی ثبت نشده.</td></tr>'}</tbody></table></div></div>`;
   $('fm').onchange=e=>{MON=e.target.value;vFollow();};
@@ -980,7 +1040,7 @@ function stModal(id){
   bg.innerHTML=`<div class="modal"><h3>${id?'ویرایش':'افزودن'} دانش‌آموز</h3>
   <div class="row"><div class="f"><label>نام و نام‌خانوادگی</label><input id="sn" value="${esc(s.name)}"${admin?'':' disabled'}></div></div>
   <div class="row"><div class="f"><label>کلاس/رشته</label><select id="sc">${CLASSES.map(c=>'<option'+(s.cls===c?' selected':'')+'>'+c+'</option>').join('')}</select></div>
-  <div class="f"><label>هدف مطالعه اختصاصی (ساعت، اختیاری)</label><input type="number" step="0.25" id="sg" value="${s.goal??''}"></div></div>
+  <div class="f"><label>هدف مطالعه اختصاصی (ساعت، اختیاری)</label><input type="text" inputmode="decimal" id="sg" value="${s.goal??''}"></div></div>
   ${admin?'<div class="row"><div class="f"><label>زیرگروه (مسئول)</label><select id="sgr"><option value="">— بدون زیرگروه —</option>'+(S.groups||[]).map(g=>'<option value="'+g.id+'"'+(s.group_id===g.id?' selected':'')+'>'+esc(g.name)+'</option>').join('')+'</select></div></div>':''}
   ${id?'<label><input type="checkbox" id="sa" '+(s.active!==false?'checked':'')+'> فعال</label>':''}
   <div style="display:flex;gap:8px;margin-top:10px"><button class="btn p" id="ok">ذخیره</button><button class="btn" id="no">انصراف</button>${id&&admin?'<button class="btn d" id="delSt" style="margin-right:auto">🗑 حذف کامل</button>':''}</div>
@@ -988,7 +1048,8 @@ function stModal(id){
   document.body.appendChild(bg);bg.querySelector('#no').onclick=()=>bg.remove();
   bg.querySelector('#ok').onclick=async()=>{
     const n=admin?$('sn').value.trim():s.name;if(!n){toast('نام را وارد کنید');return;}
-    const o={id:id||uid(),name:n,cls:$('sc').value,goal:$('sg').value===''?'':+$('sg').value,active:id?$('sa').checked:true,group_id:admin?($('sgr')?$('sgr').value:s.group_id):s.group_id};
+    const o={id:id||uid(),name:n,cls:$('sc').value,goal:(()=>{const g=numOf($('sg').value);return g==null||isNaN(g)||g<=0?'':g;})(),active:id?$('sa').checked:true,group_id:admin?($('sgr')?$('sgr').value:s.group_id):s.group_id};
+    if(S.students.some(x=>x.id!==id&&x.name.replace(/\s+/g,' ')===o.name.replace(/\s+/g,' '))&&!confirm('دانش‌آموزی با نام «'+o.name+'» قبلاً ثبت شده است. نام‌های تکراری باعث اشتباه در وارد کردن از اکسل می‌شود. باز هم ذخیره شود؟'))return;
     const okBtn=bg.querySelector('#ok');okBtn.disabled=true;
     try{
       if(id)await remoteUpdateStudent(o,admin);else await remoteInsertStudent(o);
